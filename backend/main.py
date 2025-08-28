@@ -249,12 +249,12 @@ def submit_job(
     }
 
     if tool == "alphafold":
-        # sanity: FASTA extension not required, but recommended
         af = _detect_af_databases()
 
-        # build docker cmd
-        # mounts: /db (datasets), /in (uploaded), /out (job output)
-        db_ok = all([af["uniref90"], af["mgnify"], af["u30_prefix"], af["bfd_prefix"], af["mmcif_dir"], af["obsolete"]])
+        db_ok = all([
+            af["uniref90"], af["mgnify"], af["u30_prefix"],
+            af["bfd_prefix"], af["mmcif_dir"], af["obsolete"]
+        ])
         if model_preset == "multimer":
             db_ok = db_ok and af["uniprot"] and af["pdb_seqres"]
         if not db_ok:
@@ -264,33 +264,35 @@ def submit_job(
         out_name = Path(src_path.name).stem
         out_cont_dir = f"/out/{out_name}"
 
+        # Build flags strictly as --flag=value (no spaces)
         args = [
-            "--fasta_paths", fasta_in_cont,
-            "--data_dir", "/db",
-            "--output_dir", out_cont_dir,
-            "--max_template_date", max_template_date,
-            "--db_preset", db_preset,
-            "--model_preset", model_preset,
-            "--uniref90_database_path", af["uniref90"],
-            "--mgnify_database_path", af["mgnify"],
-            "--uniref30_database_path", af["u30_prefix"],
-            "--bfd_database_path", af["bfd_prefix"],
-            "--template_mmcif_dir", af["mmcif_dir"],
-            "--obsolete_pdbs_path", af["obsolete"],
-            "--models_to_relax", "none",
-            "--use_gpu_relax", "false",
+            f"--fasta_paths={fasta_in_cont}",
+            f"--data_dir=/db",
+            f"--output_dir={out_cont_dir}",
+            f"--max_template_date={max_template_date}",
+            f"--db_preset={db_preset}",
+            f"--model_preset={model_preset}",
+            f"--uniref90_database_path={af['uniref90']}",
+            f"--mgnify_database_path={af['mgnify']}",
+            f"--uniref30_database_path={af['u30_prefix']}",
+            f"--bfd_database_path={af['bfd_prefix']}",
+            f"--template_mmcif_dir={af['mmcif_dir']}",
+            f"--obsolete_pdbs_path={af['obsolete']}",
+            "--models_to_relax=none",
+            "--use_gpu_relax=false",
         ]
         if model_preset == "multimer":
             args += [
-                "--uniprot_database_path", af["uniprot"],
-                "--pdb_seqres_database_path", af["pdb_seqres"],
+                f"--uniprot_database_path={af['uniprot']}",
+                f"--pdb_seqres_database_path={af['pdb_seqres']}",
             ]
         else:
-            # optionally include pdb70 if present (monomer only)
-            if _detect_af_databases().get("pdb70_prefix"):
-                args += ["--pdb70_database_path", _detect_af_databases()["pdb70_prefix"]]
+            pdb70 = af.get("pdb70_prefix")
+            if pdb70:
+                args += [f"--pdb70_database_path={pdb70}"]
 
-        arg_str = " ".join(shlex.quote(x) for x in args)
+        # Quote each whole arg once when composing the docker shell command
+        arg_str = " ".join(shlex.quote(s) for s in args)
 
         docker = (
             f"docker run --rm --name af-{job_id} --gpus all --shm-size=16g "
