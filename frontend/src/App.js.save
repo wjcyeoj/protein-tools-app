@@ -1,4 +1,23 @@
-// frontend/src/App.js
+
+      {/* Logs */}
+      <section>
+        <strong>Logs</strong>
+        <pre
+          style={{
+            background: "#0b0b0b",
+            color: "#aefba8",
+            padding: 12,
+            minHeight: 180,
+            whiteSpace: "pre-wrap",
+            borderRadius: 8,
+          }}
+        >
+          {logs || "(waiting…)"}
+        </pre>
+      </section>
+    </div>
+  );
+}// frontend/src/App.js
 import React, { useEffect, useRef, useState } from "react";
 
 const LS_TOOL = "ptools.tool";
@@ -209,17 +228,7 @@ export default function App() {
     xhr.send();
   }
 
-  function cancelDownload() {
-    if (xhrRef.current) xhrRef.current.abort();
-  }
 
-  // Clean up any in-flight XHR when unmounting
-  useEffect(() => {
-    return () => {
-      if (xhrRef.current) xhrRef.current.abort();
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
 
   function AFField({ label, children }) {
     return (

@@ -113,10 +113,15 @@ def _detect_af_databases() -> Dict[str, str]:
     return out
 
 def _launch(cmd: str, log_file: Path, job_id: str):
-    """Launch a long-running process, tee logs, record pid."""
+    import os, shlex, subprocess
     log_file.parent.mkdir(parents=True, exist_ok=True)
-    tee_cmd = f"stdbuf -oL -eL {cmd} | tee -a {shlex.quote(str(log_file))}; echo $? > {shlex.quote(str(log_file.with_suffix('.exit')))}"
-    proc = subprocess.Popen(["bash", "-lc", tee_cmd])
+    shell = (
+        "set -o pipefail; "
+        f"( {cmd} ) 2>&1 | stdbuf -oL -eL tee -a {shlex.quote(str(log_file))}; "
+        f"echo $? > {shlex.quote(str(log_file.with_suffix('.exit')))}"
+    )
+    # This is the key: decouple from the login session so SIGHUP doesn’t kill it
+    proc = subprocess.Popen(["bash", "-lc", shell], start_new_session=True)
     JOBS[job_id]["pid"] = proc.pid
     JOBS[job_id]["status"] = "running"
     return proc.pid
