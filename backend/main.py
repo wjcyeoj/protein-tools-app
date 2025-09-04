@@ -1,8 +1,4 @@
-import os
-import shlex
-import subprocess
-import time
-import uuid
+import os, shlex, subprocess, time, uuid, json
 from pathlib import Path
 from typing import Literal, Optional, Dict, Any
 
@@ -204,6 +200,93 @@ def build_artifact(job_id: str, lite: bool = False) -> Path:
     subprocess.run(["bash", "-lc", cmd], check=True)
     return artifact
 
+def _enumerate_residues(pdb_path: Path) -> Dict[str, list[int]]:
+    """
+    Return {chain_id: [resSeq,...]} using PDB fixed columns.
+    Works for standard .pdb. If file has no ATOM rows, returns {}.
+    """
+    chains: Dict[str, set[int]] = {}
+    with open(pdb_path) as f:
+        for line in f:
+            if not line.startswith("ATOM"):
+                continue
+            ch = (line[21].strip() or "_")
+            try:
+                res = int(line[22:26])
+            except ValueError:
+                continue
+            chains.setdefault(ch, set()).add(res)
+    return {ch: sorted(v) for ch, v in chains.items()}
+
+def _parse_freeze_spec(pdb_path: Path, spec: str) -> Dict[str, list[int]]:
+    """
+    Parse strings like:
+      "A:1-100, B:*"  or  "A:10,25,30  B:all"  or  "B"
+    Meaning: freeze those residues (keep original AA).
+    Grammar:
+      Items separated by commas or whitespace.
+      Each item: CHAIN[:SEL]
+        - CHAIN is a chain ID (single char typical; '_' if blank)
+        - SEL is:
+            * or all     -> all residues in that chain
+            N            -> one residue
+            N-M          -> inclusive range
+            N,M,K        -> comma-separated numbers
+      If no SEL given (just "B"), acts like "B:*".
+    We intersect with residues that actually exist in the PDB.
+    """
+    avail = _enumerate_residues(pdb_path)  # {chain: [resids]}
+    if not avail:
+        return {}
+
+    out: Dict[str, set[int]] = {ch: set() for ch in avail}
+    # normalize separators
+    raw_tokens = spec.replace("\n", " ").replace(";", ",").split(",")
+    tokens = []
+    for t in raw_tokens:
+        tokens += t.strip().split()
+
+    for tok in tokens:
+        if not tok:
+            continue
+        if ":" in tok:
+            ch, sel = tok.split(":", 1)
+            ch, sel = ch.strip(), sel.strip()
+        else:
+            ch, sel = tok.strip(), "*"
+
+        if ch not in avail:
+            continue
+
+        if sel in ("*", "all"):
+            out[ch].update(avail[ch])
+            continue
+
+        # split possible "10,12,20" lists
+        for chunk in sel.replace("/", ",").split(","):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            if "-" in chunk:
+                a, b = chunk.split("-", 1)
+                try:
+                    a, b = int(a), int(b)
+                except ValueError:
+                    continue
+                lo, hi = (a, b) if a <= b else (b, a)
+                out[ch].update(r for r in avail[ch] if lo <= r <= hi)
+            else:
+                try:
+                    r = int(chunk)
+                except ValueError:
+                    continue
+                if r in avail[ch]:
+                    out[ch].add(r)
+
+    # prune empties and sort
+    frozen = {ch: sorted(list(v)) for ch, v in out.items() if v}
+    return frozen
+
 # =========================
 # ---- ENDPOINTS ----------
 # =========================
@@ -231,6 +314,7 @@ def submit_job(
     mpnn_num_seq: int = Form(10),
     mpnn_batch_size: int = Form(1),
     mpnn_sampling_temp: float = Form(0.1),
+    mpnn_freeze_spec: Optional[str] = Form(None),
 ):
     job_id = uuid.uuid4().hex[:8]
     in_dir = BASE_INPUT / job_id
@@ -322,6 +406,17 @@ def submit_job(
         if not src_path.suffix.lower() in [".pdb", ".cif"]:
             return JSONResponse({"detail": "ProteinMPNN expects a .pdb or .cif file."}, status_code=400)
 
+        fixed_jsonl_path = None
+        if mpnn_freeze_spec and mpnn_freeze_spec.strip():
+            fixed = _parse_freeze_spec(src_path, mpnn_freeze_spec)
+            if fixed:
+                fixed_jsonl_path = in_dir / "fixed_positions.jsonl"
+                fixed_jsonl_path.write_text(json.dumps({"fixed_positions": fixed}) + "\n")
+        else:
+            # nothing matched; we continue without freezing (but note in the log)
+            with open(log_path, "a") as lf:
+                lf.write("NOTE: freeze spec provided, but no residues matched file; ignoring.\n")
+
         cmd = (
             f"{shlex.quote(py)} {shlex.quote(str(MPNN_SCRIPT))} "
             f"--pdb_path {shlex.quote(str(src_path))} "
@@ -332,6 +427,8 @@ def submit_job(
             f"--batch_size {int(mpnn_batch_size)} "
             f"--sampling_temp {float(mpnn_sampling_temp)}"
         )
+        if fixed_jsonl_path:
+            cmd += f" --fixed_positions_jsonl {shlex.quote(str(fixed_jsonl_path))}"
         _launch(cmd, log_path, job_id)
 
     return {"job_id": job_id, "status": "queued"}

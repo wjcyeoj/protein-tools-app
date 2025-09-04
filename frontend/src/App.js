@@ -55,6 +55,9 @@ export default function App() {
   const [status, setStatus] = useState("idle");
   const [logs, setLogs] = useState("");
   const pollRef = useRef(null);
+  const FREEZE_LS_KEY = "ptools.freezeSpec";
+  const freezeInit = () => localStorage.getItem(FREEZE_LS_KEY) || "";
+  const freezeRef = React.createRef();
 
   // persist selections
   useEffect(() => localStorage.setItem(LS_TOOL, tool), [tool]);
@@ -77,6 +80,7 @@ export default function App() {
       alert("Please choose a file first.");
       return;
     }
+    const freezeSpec = freezeRef.current?.value?.trim() || "";
     const body = new FormData();
     body.append("tool", tool);
     body.append("file", file);
@@ -85,7 +89,6 @@ export default function App() {
       body.append("model_preset", afParams.model_preset);
       body.append("db_preset", afParams.db_preset);
       body.append("max_template_date", afParams.max_template_date);
-      // backend currently hardcodes these, but harmless to send:
       body.append("models_to_relax", afParams.models_to_relax);
       body.append("use_gpu_relax", String(!!afParams.use_gpu_relax));
     } else {
@@ -93,6 +96,9 @@ export default function App() {
       body.append("mpnn_num_seq", String(mpnnParams.num_seq_per_target));
       body.append("mpnn_batch_size", String(mpnnParams.batch_size));
       body.append("mpnn_sampling_temp", String(mpnnParams.sampling_temp));
+      if (freezeSpec) {
+        body.append("mpnn_freeze_spec", freezeSpec);
+      }
     }
 
     setStatus("running");
@@ -363,6 +369,26 @@ export default function App() {
               }
             />
           </MPNNField>
+	  <MPNNField label="Freeze residues (optional)">
+  	    <input
+              ref={freezeRef}
+    	      type="text"
+    	      defaultValue={freezeInit}
+              onInput={(e) => localStorage.setItem(FREEZE_LS_KEY, e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+    	      placeholder={`Examples:
+	  A:1-100        (freeze a range)
+	  B:* or B:all   (freeze whole chain)
+	  A:10,25,30     (freeze specific positions)
+	  A:1-50, B:all  (combine)`}
+   	      style={{ width: "100%" }}
+  	    />
+  	    <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+    	      Format: <code>CHAIN[:SEL]</code>. <code>SEL</code> can be a number, a range <code>N-M</code>, a comma list <code>n,m,k</code>,
+    	      or <code>*</code>/<code>all</code> for the entire chain. Separate items by commas or spaces.
+  	    </div>
+	  </MPNNField>
         </section>
       )}
 
