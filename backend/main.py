@@ -408,14 +408,21 @@ def submit_job(
 
         fixed_jsonl_path = None
         if mpnn_freeze_spec and mpnn_freeze_spec.strip():
-            fixed = _parse_freeze_spec(src_path, mpnn_freeze_spec)
+            fixed = _parse_freeze_spec(src_path, mpnn_freeze_spec)  # -> {"A":[...], "B":[...]}
             if fixed:
                 fixed_jsonl_path = in_dir / "fixed_positions.jsonl"
-                fixed_jsonl_path.write_text(json.dumps({"fixed_positions": fixed}) + "\n")
-        else:
-            # nothing matched; we continue without freezing (but note in the log)
-            with open(log_path, "a") as lf:
-                lf.write("NOTE: freeze spec provided, but no residues matched file; ignoring.\n")
+                stem = src_path.stem
+                payload = {
+                    stem: fixed,               # "ranked_0": {...}
+                    f"{stem}.pdb": fixed,      # "ranked_0.pdb": {...} (some code paths use this)
+                }
+                fixed_jsonl_path.write_text(json.dumps(payload))   # <-- ONE JSON mapping (not JSONL lines)
+                with open(log_path, "a") as lf:
+                    lf.write(f"freeze payload mapping keys: {list(payload.keys())}\n")
+            else:
+                with open(log_path, "a") as lf:
+                    lf.write("NOTE: freeze spec provided, but no residues matched file; ignoring.\n")
+        # else: no spec provided -> do nothing/say nothing
 
         cmd = (
             f"{shlex.quote(py)} {shlex.quote(str(MPNN_SCRIPT))} "
@@ -429,6 +436,8 @@ def submit_job(
         )
         if fixed_jsonl_path:
             cmd += f" --fixed_positions_jsonl {shlex.quote(str(fixed_jsonl_path))}"
+        with open(log_path, "a") as lf:
+            lf.write(f"MPNN CMD: {cmd}\n")
         _launch(cmd, log_path, job_id)
 
     return {"job_id": job_id, "status": "queued"}
