@@ -221,71 +221,70 @@ def _enumerate_residues(pdb_path: Path) -> Dict[str, list[int]]:
 def _parse_freeze_spec(pdb_path: Path, spec: str) -> Dict[str, list[int]]:
     """
     Parse strings like:
-      "A:1-100, B:*"  or  "A:10,25,30  B:all"  or  "B"
-    Meaning: freeze those residues (keep original AA).
-    Grammar:
-      Items separated by commas or whitespace.
-      Each item: CHAIN[:SEL]
-        - CHAIN is a chain ID (single char typical; '_' if blank)
-        - SEL is:
-            * or all     -> all residues in that chain
-            N            -> one residue
-            N-M          -> inclusive range
-            N,M,K        -> comma-separated numbers
-      If no SEL given (just "B"), acts like "B:*".
-    We intersect with residues that actually exist in the PDB.
+      "A:1-10,67-100,154-168  B:5-12"
+      "A:all  B"              # B == all residues in B
+      "A:10,25,30  C:50-60"
+    Returns {"A":[...], "B":[...]} intersected with residues in the PDB.
     """
-    avail = _enumerate_residues(pdb_path)  # {chain: [resids]}
+    avail = _enumerate_residues(pdb_path)  # {chain: [resSeqs]}
     if not avail:
         return {}
 
     out: Dict[str, set[int]] = {ch: set() for ch in avail}
-    # normalize separators
-    raw_tokens = spec.replace("\n", " ").replace(";", ",").split(",")
-    tokens = []
-    for t in raw_tokens:
-        tokens += t.strip().split()
 
-    for tok in tokens:
-        if not tok:
-            continue
-        if ":" in tok:
-            ch, sel = tok.split(":", 1)
-            ch, sel = ch.strip(), sel.strip()
-        else:
-            ch, sel = tok.strip(), "*"
+    # split groups by whitespace or ';' (keep commas for per-chain lists)
+    groups: list[str] = []
+    for part in spec.replace("\n", " ").split(";"):
+        groups += part.strip().split()  # whitespace
 
-        if ch not in avail:
-            continue
+    current_chain: Optional[str] = None
 
-        if sel in ("*", "all"):
-            out[ch].update(avail[ch])
-            continue
-
-        # split possible "10,12,20" lists
-        for chunk in sel.replace("/", ",").split(","):
-            chunk = chunk.strip()
-            if not chunk:
+    def apply_selections(chain: str, sel_str: str):
+        # sel_str like "1-10,67-100,154-168" or "all" or "10,25"
+        if chain not in avail:
+            return
+        if sel_str.lower() in ("*", "all"):
+            out[chain].update(avail[chain])
+            return
+        for chunk in sel_str.replace("/", ",").split(","):
+            c = chunk.strip()
+            if not c:
                 continue
-            if "-" in chunk:
-                a, b = chunk.split("-", 1)
+            if "-" in c:
+                a, b = c.split("-", 1)
                 try:
-                    a, b = int(a), int(b)
+                    lo, hi = int(a), int(b)
                 except ValueError:
                     continue
-                lo, hi = (a, b) if a <= b else (b, a)
-                out[ch].update(r for r in avail[ch] if lo <= r <= hi)
+                if lo > hi:
+                    lo, hi = hi, lo
+                out[chain].update(r for r in avail[chain] if lo <= r <= hi)
             else:
                 try:
-                    r = int(chunk)
+                    r = int(c)
                 except ValueError:
                     continue
-                if r in avail[ch]:
-                    out[ch].add(r)
+                if r in avail[chain]:
+                    out[chain].add(r)
 
-    # prune empties and sort
-    frozen = {ch: sorted(list(v)) for ch, v in out.items() if v}
-    return frozen
+    for grp in groups:
+        if not grp:
+            continue
+        if ":" in grp:
+            ch, sel = grp.split(":", 1)
+            current_chain = ch.strip()
+            apply_selections(current_chain, sel.strip())
+        else:
+            # either a bare chain ("B") or extra selections for the current chain
+            token = grp.strip()
+            if token in avail:
+                current_chain = token
+                apply_selections(current_chain, "all")
+            elif current_chain:
+                apply_selections(current_chain, token)
+            # else: ignore
+
+    return {ch: sorted(v) for ch, v in out.items() if v}
 
 # =========================
 # ---- ENDPOINTS ----------
