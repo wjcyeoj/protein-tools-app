@@ -58,6 +58,10 @@ export default function App() {
   const FREEZE_LS_KEY = "ptools.freezeSpec";
   const freezeInit = () => localStorage.getItem(FREEZE_LS_KEY) || "";
   const freezeRef = React.createRef();
+  // let users choose file vs text for AlphaFold
+  const [inputMode, setInputMode] = useState("file"); // "file" | "text"
+  const [seqName, setSeqName] = useState("query");    // header if user pastes plain sequence
+  const [seqText, setSeqText] = useState("");         // pasted FASTA or plain sequence
 
   // persist selections
   useEffect(() => localStorage.setItem(LS_TOOL, tool), [tool]);
@@ -76,14 +80,51 @@ export default function App() {
   // Submit job (send individual fields the backend expects)
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!file) {
-      alert("Please choose a file first.");
+
+    // Decide what file to send
+    let fileToSend = file;
+
+    // For AlphaFold, if user chose "paste text" mode, convert it to a virtual FASTA file
+    if (tool === "alphafold" && inputMode === "text") {
+      const raw = (seqText || "").trim();
+      if (!raw) {
+        alert("Please paste a FASTA or sequence.");
+        return;
+      }
+
+      // If it already looks like FASTA, use as-is; otherwise wrap as a single FASTA record
+      let fastaText;
+      if (raw.startsWith(">") || raw.includes("\n>")) {
+        fastaText = raw.endsWith("\n") ? raw : raw + "\n";
+      } else {
+        const seqOnly = raw.replace(/\s+/g, "");
+        if (!seqOnly) {
+          alert("No sequence letters found in the pasted text.");
+          return;
+        }
+        const header = (seqName || "sequence").trim() || "sequence";
+        fastaText = `>${header}\n${seqOnly}\n`;
+      }
+
+      const safeName = (seqName || "sequence").replace(/[^A-Za-z0-9_.-]+/g, "_");
+      fileToSend = new File([fastaText], `${safeName}.fasta`, { type: "text/plain" });
+    }
+
+    // Validate inputs per tool
+    if (tool === "proteinmpnn" && !fileToSend) {
+      alert("Please choose a PDB/CIF file for ProteinMPNN.");
       return;
     }
+    if (tool === "alphafold" && !fileToSend) {
+      alert("Please choose a FASTA file or paste a sequence.");
+      return;
+    }
+
+    // Build form data (unchanged for MPNN; AF fields still sent the same)
     const freezeSpec = freezeRef.current?.value?.trim() || "";
     const body = new FormData();
     body.append("tool", tool);
-    body.append("file", file);
+    body.append("file", fileToSend);
 
     if (tool === "alphafold") {
       body.append("model_preset", afParams.model_preset);
@@ -96,9 +137,7 @@ export default function App() {
       body.append("mpnn_num_seq", String(mpnnParams.num_seq_per_target));
       body.append("mpnn_batch_size", String(mpnnParams.batch_size));
       body.append("mpnn_sampling_temp", String(mpnnParams.sampling_temp));
-      if (freezeSpec) {
-        body.append("mpnn_freeze_spec", freezeSpec);
-      }
+      if (freezeSpec) body.append("mpnn_freeze_spec", freezeSpec);
     }
 
     setStatus("running");
@@ -257,15 +296,76 @@ export default function App() {
         </label>
       </section>
 
+      {/* File chooser OR paste box */}
       <section style={{ margin: "1rem 0" }}>
-        <input
-          type="file"
-          accept={tool === "alphafold" ? ".fa,.fasta" : ".pdb,.cif"}
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-        />
-        <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-          {tool === "alphafold" ? "Upload FASTA (.fa/.fasta)" : "Upload PDB/CIF (.pdb/.cif)"}
-        </div>
+        {/* Only AlphaFold gets the mode toggle */}
+        {tool === "alphafold" && (
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ marginRight: 12 }}>
+              <input
+                type="radio"
+                name="af-input-mode"
+                value="file"
+                checked={inputMode === "file"}
+                onChange={() => setInputMode("file")}
+              />{" "}
+              Upload FASTA file
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="af-input-mode"
+                value="text"
+                checked={inputMode === "text"}
+                onChange={() => setInputMode("text")}
+              />{" "}
+              Paste FASTA / sequence
+            </label>
+          </div>
+        )}
+
+        {tool === "alphafold" && inputMode === "text" ? (
+          <>
+            <div style={{ marginBottom: 8 }}>
+              <label>
+                <strong>Sequence name</strong>{" "}
+                <input
+                  type="text"
+                  value={seqName}
+                  onChange={(e) => setSeqName(e.target.value)}
+                  style={{ width: 220 }}
+                />
+              </label>
+            </div>
+
+            <textarea
+              rows={10}
+              placeholder={`>chain_A
+      MKTAYIAK...
+      >chain_B
+      GHHHHHH...`}
+              value={seqText}
+              onChange={(e) => setSeqText(e.target.value)}
+              style={{ width: "100%", fontFamily: "monospace" }}
+            />
+
+            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+              Paste a full FASTA (multiple <code>&gt;</code> headers allowed for multimer) or a single raw sequence.
+              Raw sequences will be wrapped as <code>&gt;{seqName}</code>.
+            </div>
+          </>
+        ) : (
+          <>
+            <input
+              type="file"
+              accept={tool === "alphafold" ? ".fa,.fasta" : ".pdb,.cif"}
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+              {tool === "alphafold" ? "Upload FASTA (.fa/.fasta)" : "Upload PDB/CIF (.pdb/.cif)"}
+            </div>
+          </>
+        )}
       </section>
 
       {tool === "alphafold" && (
