@@ -1,0 +1,32 @@
+name: protein-tools
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - ../apps/api/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      # Tools (read-only)
+      - /data/tools:/data/tools:ro
+      # AlphaFold databases (read-only)
+      - /data/datasets/alphafold:/data/datasets/alphafold:ro
+      # Persist job outputs
+      - /data/appjobs:/app/backend/jobs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /data:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    env_file:
+      - ../apps/web/.env
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    restart: unless-stopped
