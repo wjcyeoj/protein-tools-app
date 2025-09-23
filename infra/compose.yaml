@@ -4,8 +4,13 @@ services:
     build:
       context: ..
       dockerfile: apps/api/Dockerfile
-    env_file:
-      - ../apps/api/.env
+    environment:
+      - PYTHONPATH=/app
+      - AF_DB_DIR=/data/datasets/alphafold
+      - MPNN_PYTHON=python3
+      - MPNN_SCRIPT=/data/tools/proteinmpnn_official/protein_mpnn_run.py
+      - MPNN_WEIGHTS_DIR=/data/tools/proteinmpnn_official/vanilla_model_weights
+      - JOBS_DIR=/app/backend/jobs
     ports:
       - "8000:8000"
     volumes:
@@ -14,8 +19,9 @@ services:
       # AlphaFold databases (read-only)
       - /data/datasets/alphafold:/data/datasets/alphafold:ro
       # Persist job outputs
-      - /data/appjobs:/app/backend/jobs
+      - /data/appjobs:/data/backend/jobs
       - /var/run/docker.sock:/var/run/docker.sock
+      - /data/tools/proteinmpnn_official:/data/tools/proteinmpnn_official
       - /data:/data
     restart: unless-stopped
 

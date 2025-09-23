@@ -23,7 +23,7 @@ BASE_LOGS = Path("/data/appjobs/logs")           # per-job logs
 
 # ProteinMPNN (official runner)
 MPNN_ROOT = Path("/data/tools/proteinmpnn_official")
-MPNN_PY = MPNN_ROOT / ".venv" / "bin" / "python"  # falls back to python3 if missing
+MPNN_PY = "python3"
 MPNN_SCRIPT = MPNN_ROOT / "protein_mpnn_run.py"
 MPNN_WEIGHTS = Path("/data/tools/proteinmpnn_official/vanilla_model_weights")
 
