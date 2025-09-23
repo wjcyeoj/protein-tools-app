@@ -20,5 +20,5 @@ This web application allows users to run protein structure prediction tools like
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/protein-tools-app.git
+git clone https://github.com/wjcyeoj/protein-tools-app.git
 cd protein-tools-app
