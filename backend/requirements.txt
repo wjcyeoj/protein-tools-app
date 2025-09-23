@@ -1,3 +1,5 @@
+numpy
+biopython
 fastapi>=0.111
 uvicorn[standard]>=0.23
 python-multipart>=0.0.9

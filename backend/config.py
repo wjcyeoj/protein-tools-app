@@ -3,7 +3,7 @@ from pathlib import Path
 
 # === AlphaFold config ===
 AF_IMAGE = os.environ.get("AF_IMAGE", "alphafold:cuda12jax")
-AF_DB_DIR = Path(os.environ.get("AF_DB_DIR", "/data/af_download_data")).resolve()
+AF_DB_DIR = Path(os.environ.get("AF_DB_DIR", "/data/datasets/af_download_data")).resolve()
 AF_OUTPUT_BASE = Path(os.environ.get("AF_OUTPUT_BASE", "/data/output/alphafold")).resolve()
 
 # === ProteinMPNN config ===
@@ -18,7 +18,7 @@ MPNN_OUT_BASE = Path(os.environ.get(
     "MPNN_OUT_BASE", "/data/output/proteinmpnn"
 )).resolve()
 MPNN_PYTHON = os.environ.get(
-    "MPNN_PYTHON", "/data/tools/proteinmpnn_official/.venv/bin/python"
+    "MPNN_PYTHON", "python3"
 )
 
 # === Jobs scratch ===

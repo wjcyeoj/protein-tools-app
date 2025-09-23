@@ -1,9 +1,0 @@
-{
-  "tool": "proteinmpnn",
-  "job_id": "68af69d9",
-  "pid": 3888,
-  "log": "/data/app/protein-tools-app/backend/jobs/68af69d9/mpnn.log",
-  "outputs_dir": "/data/output/proteinmpnn/68af69d9",
-  "launched_at": 1756326361.2319772,
-  "cmd": "/data/tools/proteinmpnn_official/.venv/bin/python /data/tools/proteinmpnn_official/protein_mpnn_run.py --pdb_path /data/app/protein-tools-app/backend/jobs/68af69d9/ranked_0.pdb --out_folder /data/output/proteinmpnn/68af69d9 --path_to_model_weights /data/tools/proteinmpnn_official/vanilla_model_weights --model_name v_48_020 --num_seq_per_target 10 --batch_size 1 --sampling_temp 0.6"
-}
