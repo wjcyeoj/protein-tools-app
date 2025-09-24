@@ -1,0 +1,27 @@
+----------------------------------------
+chain_id_jsonl is NOT loaded
+----------------------------------------
+fixed_positions_jsonl is NOT loaded
+----------------------------------------
+pssm_jsonl is NOT loaded
+----------------------------------------
+omit_AA_jsonl is NOT loaded
+----------------------------------------
+bias_AA_jsonl is NOT loaded
+----------------------------------------
+tied_positions_jsonl is NOT loaded
+----------------------------------------
+bias by residue dictionary is not loaded, or not provided
+----------------------------------------
+Traceback (most recent call last):
+  File "/data/tools/proteinmpnn_official/protein_mpnn_run.py", line 469, in <module>
+    main(args)   
+  File "/data/tools/proteinmpnn_official/protein_mpnn_run.py", line 178, in main
+    checkpoint = torch.load(checkpoint_path, map_location=device) 
+  File "/data/tools/proteinmpnn_official/.venv/lib/python3.10/site-packages/torch/serialization.py", line 1425, in load
+    with _open_file_like(f, "rb") as opened_file:
+  File "/data/tools/proteinmpnn_official/.venv/lib/python3.10/site-packages/torch/serialization.py", line 751, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/data/tools/proteinmpnn_official/.venv/lib/python3.10/site-packages/torch/serialization.py", line 732, in __init__
+    super().__init__(open(name, mode))
+FileNotFoundError: [Errno 2] No such file or directory: '/data/tools/proteinmpnn/vanilla_model_weights/v_48_020.pt'

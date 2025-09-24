@@ -1,0 +1,24 @@
+{
+  "tool": "mpnn",
+  "pid": 6762,
+  "cmd": [
+    "/data/tools/proteinmpnn_official/.venv/bin/python",
+    "/data/tools/proteinmpnn_official/protein_mpnn_run.py",
+    "--pdb_path",
+    "/data/app/protein-tools-app/jobs/0f07ef35/input.pdb",
+    "--out_folder",
+    "/data/app/protein-tools-app/jobs/0f07ef35/output",
+    "--path_to_model_weights",
+    "/data/tools/proteinmpnn/vanilla_model_weights",
+    "--model_name",
+    "v_48_020",
+    "--num_seq_per_target",
+    "10",
+    "--batch_size",
+    "1",
+    "--sampling_temp",
+    "0.6"
+  ],
+  "status": "running",
+  "start_ts": 1756315802.963631
+}
