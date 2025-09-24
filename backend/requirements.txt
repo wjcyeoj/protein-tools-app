@@ -1,0 +1,7 @@
+numpy
+biopython
+fastapi>=0.111
+uvicorn[standard]>=0.23
+python-multipart>=0.0.9
+pydantic>=2.7
+aiofiles>=24.1
