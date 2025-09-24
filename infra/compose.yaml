@@ -10,7 +10,7 @@ services:
       - MPNN_PYTHON=python3
       - MPNN_SCRIPT=/data/tools/proteinmpnn_official/protein_mpnn_run.py
       - MPNN_WEIGHTS_DIR=/data/tools/proteinmpnn_official/vanilla_model_weights
-      - JOBS_DIR=/app/backend/jobs
+      - JOBS_DIR=/data/appjobs
     ports:
       - "8000:8000"
     volumes:
@@ -28,9 +28,9 @@ services:
   web:
     build:
       context: ..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: frontend/Dockerfile
     env_file:
-      - ../apps/web/.env
+      - ../frontend/.env
     depends_on:
       - api
     ports:

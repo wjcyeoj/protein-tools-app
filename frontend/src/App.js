@@ -1,33 +1,35 @@
 // frontend/src/App.js
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 
-const LS_TOOL = "ptools.tool";
-const LS_AF = "ptools.afParams";
-const LS_MPNN = "ptools.mpnnParams";
-const LS_JOB = "ptools.currentJob";
+const LS_TOOL = 'ptools.tool';
+const LS_AF = 'ptools.afParams';
+const LS_MPNN = 'ptools.mpnnParams';
+const LS_JOB = 'ptools.currentJob';
 
 export default function App() {
-  const [tool, setTool] = useState(() => localStorage.getItem(LS_TOOL) || "alphafold");
+  const [tool, setTool] = useState(() => localStorage.getItem(LS_TOOL) || 'alphafold');
   const [file, setFile] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const [downloadPct, setDownloadPct] = useState(0);   // 0–100, or null if unknown
+  const [downloadPct, setDownloadPct] = useState(0); // 0–100, or null if unknown
   const xhrRef = useRef(null);
 
   const [afParams, setAfParams] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem(LS_AF)) || {
-        model_preset: "monomer",
-        db_preset: "full_dbs",
-        max_template_date: "2024-12-31",
-        models_to_relax: "none",
-        use_gpu_relax: false,
-      };
+      return (
+        JSON.parse(localStorage.getItem(LS_AF)) || {
+          model_preset: 'monomer',
+          db_preset: 'full_dbs',
+          max_template_date: '2024-12-31',
+          models_to_relax: 'none',
+          use_gpu_relax: false,
+        }
+      );
     } catch {
       return {
-        model_preset: "monomer",
-        db_preset: "full_dbs",
-        max_template_date: "2024-12-31",
-        models_to_relax: "none",
+        model_preset: 'monomer',
+        db_preset: 'full_dbs',
+        max_template_date: '2024-12-31',
+        models_to_relax: 'none',
         use_gpu_relax: false,
       };
     }
@@ -35,15 +37,17 @@ export default function App() {
 
   const [mpnnParams, setMpnnParams] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem(LS_MPNN)) || {
-        model_name: "v_48_020",
-        num_seq_per_target: 10,
-        batch_size: 1,
-        sampling_temp: 0.2,
-      };
+      return (
+        JSON.parse(localStorage.getItem(LS_MPNN)) || {
+          model_name: 'v_48_020',
+          num_seq_per_target: 10,
+          batch_size: 1,
+          sampling_temp: 0.2,
+        }
+      );
     } catch {
       return {
-        model_name: "v_48_020",
+        model_name: 'v_48_020',
         num_seq_per_target: 10,
         batch_size: 1,
         sampling_temp: 0.2,
@@ -51,17 +55,17 @@ export default function App() {
     }
   });
 
-  const [jobId, setJobId] = useState("");
-  const [status, setStatus] = useState("idle");
-  const [logs, setLogs] = useState("");
+  const [jobId, setJobId] = useState('');
+  const [status, setStatus] = useState('idle');
+  const [logs, setLogs] = useState('');
   const pollRef = useRef(null);
-  const FREEZE_LS_KEY = "ptools.freezeSpec";
-  const freezeInit = () => localStorage.getItem(FREEZE_LS_KEY) || "";
+  const FREEZE_LS_KEY = 'ptools.freezeSpec';
+  const freezeInit = () => localStorage.getItem(FREEZE_LS_KEY) || '';
   const freezeRef = React.createRef();
   // let users choose file vs text for AlphaFold
-  const [inputMode, setInputMode] = useState("file"); // "file" | "text"
-  const [seqName, setSeqName] = useState("query");    // header if user pastes plain sequence
-  const [seqText, setSeqText] = useState("");         // pasted FASTA or plain sequence
+  const [inputMode, setInputMode] = useState('file'); // "file" | "text"
+  const [seqName, setSeqName] = useState('query'); // header if user pastes plain sequence
+  const [seqText, setSeqText] = useState(''); // pasted FASTA or plain sequence
 
   // persist selections
   useEffect(() => localStorage.setItem(LS_TOOL, tool), [tool]);
@@ -70,7 +74,7 @@ export default function App() {
 
   // reattach to an in-flight job after refresh
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(LS_JOB) || "null");
+    const saved = JSON.parse(localStorage.getItem(LS_JOB) || 'null');
     if (saved?.id) {
       setJobId(saved.id);
       if (saved.tool) setTool(saved.tool);
@@ -85,66 +89,66 @@ export default function App() {
     let fileToSend = file;
 
     // For AlphaFold, if user chose "paste text" mode, convert it to a virtual FASTA file
-    if (tool === "alphafold" && inputMode === "text") {
-      const raw = (seqText || "").trim();
+    if (tool === 'alphafold' && inputMode === 'text') {
+      const raw = (seqText || '').trim();
       if (!raw) {
-        alert("Please paste a FASTA or sequence.");
+        alert('Please paste a FASTA or sequence.');
         return;
       }
 
       // If it already looks like FASTA, use as-is; otherwise wrap as a single FASTA record
       let fastaText;
-      if (raw.startsWith(">") || raw.includes("\n>")) {
-        fastaText = raw.endsWith("\n") ? raw : raw + "\n";
+      if (raw.startsWith('>') || raw.includes('\n>')) {
+        fastaText = raw.endsWith('\n') ? raw : raw + '\n';
       } else {
-        const seqOnly = raw.replace(/\s+/g, "");
+        const seqOnly = raw.replace(/\s+/g, '');
         if (!seqOnly) {
-          alert("No sequence letters found in the pasted text.");
+          alert('No sequence letters found in the pasted text.');
           return;
         }
-        const header = (seqName || "sequence").trim() || "sequence";
+        const header = (seqName || 'sequence').trim() || 'sequence';
         fastaText = `>${header}\n${seqOnly}\n`;
       }
 
-      const safeName = (seqName || "sequence").replace(/[^A-Za-z0-9_.-]+/g, "_");
-      fileToSend = new File([fastaText], `${safeName}.fasta`, { type: "text/plain" });
+      const safeName = (seqName || 'sequence').replace(/[^A-Za-z0-9_.-]+/g, '_');
+      fileToSend = new File([fastaText], `${safeName}.fasta`, { type: 'text/plain' });
     }
 
     // Validate inputs per tool
-    if (tool === "proteinmpnn" && !fileToSend) {
-      alert("Please choose a PDB/CIF file for ProteinMPNN.");
+    if (tool === 'proteinmpnn' && !fileToSend) {
+      alert('Please choose a PDB/CIF file for ProteinMPNN.');
       return;
     }
-    if (tool === "alphafold" && !fileToSend) {
-      alert("Please choose a FASTA file or paste a sequence.");
+    if (tool === 'alphafold' && !fileToSend) {
+      alert('Please choose a FASTA file or paste a sequence.');
       return;
     }
 
     // Build form data (unchanged for MPNN; AF fields still sent the same)
-    const freezeSpec = freezeRef.current?.value?.trim() || "";
+    const freezeSpec = freezeRef.current?.value?.trim() || '';
     const body = new FormData();
-    body.append("tool", tool);
-    body.append("file", fileToSend);
+    body.append('tool', tool);
+    body.append('file', fileToSend);
 
-    if (tool === "alphafold") {
-      body.append("model_preset", afParams.model_preset);
-      body.append("db_preset", afParams.db_preset);
-      body.append("max_template_date", afParams.max_template_date);
-      body.append("models_to_relax", afParams.models_to_relax);
-      body.append("use_gpu_relax", String(!!afParams.use_gpu_relax));
+    if (tool === 'alphafold') {
+      body.append('model_preset', afParams.model_preset);
+      body.append('db_preset', afParams.db_preset);
+      body.append('max_template_date', afParams.max_template_date);
+      body.append('models_to_relax', afParams.models_to_relax);
+      body.append('use_gpu_relax', String(!!afParams.use_gpu_relax));
     } else {
-      body.append("mpnn_model_name", mpnnParams.model_name);
-      body.append("mpnn_num_seq", String(mpnnParams.num_seq_per_target));
-      body.append("mpnn_batch_size", String(mpnnParams.batch_size));
-      body.append("mpnn_sampling_temp", String(mpnnParams.sampling_temp));
-      if (freezeSpec) body.append("mpnn_freeze_spec", freezeSpec);
+      body.append('mpnn_model_name', mpnnParams.model_name);
+      body.append('mpnn_num_seq', String(mpnnParams.num_seq_per_target));
+      body.append('mpnn_batch_size', String(mpnnParams.batch_size));
+      body.append('mpnn_sampling_temp', String(mpnnParams.sampling_temp));
+      if (freezeSpec) body.append('mpnn_freeze_spec', freezeSpec);
     }
 
-    setStatus("running");
-    setLogs("");
-    setJobId("");
+    setStatus('running');
+    setLogs('');
+    setJobId('');
     try {
-      const res = await fetch("/jobs", { method: "POST", body });
+      const res = await fetch('/jobs', { method: 'POST', body });
       if (!res.ok) {
         const t = await res.text();
         throw new Error(`Submit failed (${res.status}): ${t}`);
@@ -153,7 +157,7 @@ export default function App() {
       setJobId(job_id);
       localStorage.setItem(LS_JOB, JSON.stringify({ id: job_id, tool }));
     } catch (err) {
-      setStatus("error");
+      setStatus('error');
       alert(err.message);
     }
   }
@@ -169,7 +173,7 @@ export default function App() {
           const js = await s.json();
           setStatus(js.status);
           // if finished/failed, clear the “current job” marker
-          if (js.status && js.status !== "running") {
+          if (js.status && js.status !== 'running') {
             localStorage.removeItem(LS_JOB);
           }
         }
@@ -177,7 +181,7 @@ export default function App() {
         if (l.ok) {
           const j = await l.json(); // backend returns { log: "..." }
           // optional cleanup: collapse excessive separators
-          const cleaned = (j.log || "").replace(/(\n[-=]{3,}\n)+/g, "\n");
+          const cleaned = (j.log || '').replace(/(\n[-=]{3,}\n)+/g, '\n');
           setLogs(cleaned);
         }
       } catch {
@@ -190,9 +194,9 @@ export default function App() {
     return () => clearInterval(pollRef.current);
   }, [jobId]);
 
-  const canDownload = jobId && status === "finished";
+  const canDownload = jobId && status === 'finished';
 
-  async function handleDownload(mode = "full") {
+  async function handleDownload(mode = 'full') {
     if (!canDownload || downloading) return;
 
     setDownloading(true);
@@ -202,8 +206,8 @@ export default function App() {
     const xhr = new XMLHttpRequest();
     xhrRef.current = xhr;
 
-    xhr.open("GET", url, true);
-    xhr.responseType = "blob";
+    xhr.open('GET', url, true);
+    xhr.responseType = 'blob';
 
     // Fires repeatedly as bytes arrive
     xhr.onprogress = (evt) => {
@@ -218,12 +222,12 @@ export default function App() {
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        const dispo = xhr.getResponseHeader("content-disposition") || "";
+        const dispo = xhr.getResponseHeader('content-disposition') || '';
         const m = dispo.match(/filename="?([^"]+)"?/);
         const filename = m?.[1] || `${jobId}.tgz`;
 
         const blobUrl = URL.createObjectURL(xhr.response);
-        const a = document.createElement("a");
+        const a = document.createElement('a');
         a.href = blobUrl;
         a.download = filename;
         document.body.appendChild(a);
@@ -239,7 +243,7 @@ export default function App() {
     };
 
     xhr.onerror = () => {
-      alert("Network error during download");
+      alert('Network error during download');
       setDownloading(false);
       setDownloadPct(0);
       xhrRef.current = null;
@@ -269,24 +273,30 @@ export default function App() {
   function AFField({ label, children }) {
     return (
       <div style={{ marginBottom: 8 }}>
-        <label><strong>{label}:</strong> {children}</label>
+        <label>
+          <strong>{label}:</strong> {children}
+        </label>
       </div>
     );
   }
   function MPNNField({ label, children }) {
     return (
       <div style={{ marginBottom: 8 }}>
-        <label><strong>{label}:</strong> {children}</label>
+        <label>
+          <strong>{label}:</strong> {children}
+        </label>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 960, margin: "2rem auto", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={{ maxWidth: 960, margin: '2rem auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <h1 style={{ marginBottom: 6 }}>Protein Tools</h1>
-      <p style={{ color: "#666", marginTop: 0 }}>Run AlphaFold or ProteinMPNN on your EC2 instance.</p>
+      <p style={{ color: '#666', marginTop: 0 }}>
+        Run AlphaFold or ProteinMPNN on your EC2 instance.
+      </p>
 
-      <section style={{ margin: "1rem 0" }}>
+      <section style={{ margin: '1rem 0' }}>
         <label>
           <strong>Tool:&nbsp;</strong>
           <select value={tool} onChange={(e) => setTool(e.target.value)}>
@@ -297,18 +307,18 @@ export default function App() {
       </section>
 
       {/* File chooser OR paste box */}
-      <section style={{ margin: "1rem 0" }}>
+      <section style={{ margin: '1rem 0' }}>
         {/* Only AlphaFold gets the mode toggle */}
-        {tool === "alphafold" && (
+        {tool === 'alphafold' && (
           <div style={{ marginBottom: 8 }}>
             <label style={{ marginRight: 12 }}>
               <input
                 type="radio"
                 name="af-input-mode"
                 value="file"
-                checked={inputMode === "file"}
-                onChange={() => setInputMode("file")}
-              />{" "}
+                checked={inputMode === 'file'}
+                onChange={() => setInputMode('file')}
+              />{' '}
               Upload FASTA file
             </label>
             <label>
@@ -316,19 +326,19 @@ export default function App() {
                 type="radio"
                 name="af-input-mode"
                 value="text"
-                checked={inputMode === "text"}
-                onChange={() => setInputMode("text")}
-              />{" "}
+                checked={inputMode === 'text'}
+                onChange={() => setInputMode('text')}
+              />{' '}
               Paste FASTA / sequence
             </label>
           </div>
         )}
 
-        {tool === "alphafold" && inputMode === "text" ? (
+        {tool === 'alphafold' && inputMode === 'text' ? (
           <>
             <div style={{ marginBottom: 8 }}>
               <label>
-                <strong>Sequence name</strong>{" "}
+                <strong>Sequence name</strong>{' '}
                 <input
                   type="text"
                   value={seqName}
@@ -346,35 +356,37 @@ export default function App() {
       GHHHHHH...`}
               value={seqText}
               onChange={(e) => setSeqText(e.target.value)}
-              style={{ width: "100%", fontFamily: "monospace" }}
+              style={{ width: '100%', fontFamily: 'monospace' }}
             />
 
-            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-              Paste a full FASTA (multiple <code>&gt;</code> headers allowed for multimer) or a single raw sequence.
-              Raw sequences will be wrapped as <code>&gt;{seqName}</code>.
+            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              Paste a full FASTA (multiple <code>&gt;</code> headers allowed for multimer) or a
+              single raw sequence. Raw sequences will be wrapped as <code>&gt;{seqName}</code>.
             </div>
           </>
         ) : (
           <>
             <input
               type="file"
-              accept={tool === "alphafold" ? ".fa,.fasta" : ".pdb,.cif"}
+              accept={tool === 'alphafold' ? '.fa,.fasta' : '.pdb,.cif'}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
-            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-              {tool === "alphafold" ? "Upload FASTA (.fa/.fasta)" : "Upload PDB/CIF (.pdb/.cif)"}
+            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              {tool === 'alphafold' ? 'Upload FASTA (.fa/.fasta)' : 'Upload PDB/CIF (.pdb/.cif)'}
             </div>
           </>
         )}
       </section>
 
-      {tool === "alphafold" && (
-        <section style={{ border: "1px solid #eee", borderRadius: 8, padding: 12, margin: "1rem 0" }}>
+      {tool === 'alphafold' && (
+        <section
+          style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}
+        >
           <h3 style={{ marginTop: 0 }}>AlphaFold parameters</h3>
           <AFField label="model_preset">
             <select
               value={afParams.model_preset}
-              onChange={(e) => setAfParams(p => ({ ...p, model_preset: e.target.value }))}
+              onChange={(e) => setAfParams((p) => ({ ...p, model_preset: e.target.value }))}
             >
               <option value="monomer">monomer</option>
               <option value="multimer">multimer</option>
@@ -383,7 +395,7 @@ export default function App() {
           <AFField label="db_preset">
             <select
               value={afParams.db_preset}
-              onChange={(e) => setAfParams(p => ({ ...p, db_preset: e.target.value }))}
+              onChange={(e) => setAfParams((p) => ({ ...p, db_preset: e.target.value }))}
             >
               <option value="full_dbs">full_dbs</option>
               <option value="reduced_dbs">reduced_dbs</option>
@@ -393,13 +405,13 @@ export default function App() {
             <input
               type="date"
               value={afParams.max_template_date}
-              onChange={(e) => setAfParams(p => ({ ...p, max_template_date: e.target.value }))}
+              onChange={(e) => setAfParams((p) => ({ ...p, max_template_date: e.target.value }))}
             />
           </AFField>
           <AFField label="models_to_relax">
             <select
               value={afParams.models_to_relax}
-              onChange={(e) => setAfParams(p => ({ ...p, models_to_relax: e.target.value }))}
+              onChange={(e) => setAfParams((p) => ({ ...p, models_to_relax: e.target.value }))}
             >
               <option value="none">none</option>
               <option value="best">best</option>
@@ -410,22 +422,24 @@ export default function App() {
             <input
               type="checkbox"
               checked={!!afParams.use_gpu_relax}
-              onChange={(e) => setAfParams(p => ({ ...p, use_gpu_relax: e.target.checked }))}
+              onChange={(e) => setAfParams((p) => ({ ...p, use_gpu_relax: e.target.checked }))}
             />
           </AFField>
-          <div style={{ fontSize: 12, color: "#666" }}>
+          <div style={{ fontSize: 12, color: '#666' }}>
             Note: for multimer you don’t need <code>pdb70</code>; backend picks correct flags.
           </div>
         </section>
       )}
 
-      {tool === "proteinmpnn" && (
-        <section style={{ border: "1px solid #eee", borderRadius: 8, padding: 12, margin: "1rem 0" }}>
+      {tool === 'proteinmpnn' && (
+        <section
+          style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}
+        >
           <h3 style={{ marginTop: 0 }}>ProteinMPNN parameters</h3>
           <MPNNField label="model_name">
             <select
               value={mpnnParams.model_name}
-              onChange={(e) => setMpnnParams(p => ({ ...p, model_name: e.target.value }))}
+              onChange={(e) => setMpnnParams((p) => ({ ...p, model_name: e.target.value }))}
             >
               <option value="v_48_002">v_48_002</option>
               <option value="v_48_010">v_48_010</option>
@@ -442,7 +456,7 @@ export default function App() {
               max={200}
               value={mpnnParams.num_seq_per_target}
               onChange={(e) =>
-                setMpnnParams(p => ({ ...p, num_seq_per_target: Number(e.target.value || 1) }))
+                setMpnnParams((p) => ({ ...p, num_seq_per_target: Number(e.target.value || 1) }))
               }
             />
           </MPNNField>
@@ -453,7 +467,7 @@ export default function App() {
               max={32}
               value={mpnnParams.batch_size}
               onChange={(e) =>
-                setMpnnParams(p => ({ ...p, batch_size: Number(e.target.value || 1) }))
+                setMpnnParams((p) => ({ ...p, batch_size: Number(e.target.value || 1) }))
               }
             />
           </MPNNField>
@@ -465,43 +479,44 @@ export default function App() {
               max={1.5}
               value={mpnnParams.sampling_temp}
               onChange={(e) =>
-                setMpnnParams(p => ({ ...p, sampling_temp: Number(e.target.value || 0.2) }))
+                setMpnnParams((p) => ({ ...p, sampling_temp: Number(e.target.value || 0.2) }))
               }
             />
           </MPNNField>
-	  <MPNNField label="Freeze residues (optional)">
-  	    <input
+          <MPNNField label="Freeze residues (optional)">
+            <input
               ref={freezeRef}
-    	      type="text"
-    	      defaultValue={freezeInit}
+              type="text"
+              defaultValue={freezeInit}
               onInput={(e) => localStorage.setItem(FREEZE_LS_KEY, e.target.value)}
               autoComplete="off"
               spellCheck={false}
-    	      placeholder={`Examples:
+              placeholder={`Examples:
 	  A:1-100        (freeze a range)
 	  B:* or B:all   (freeze whole chain)
 	  A:10,25,30     (freeze specific positions)
 	  A:1-50, B:all  (combine)`}
-   	      style={{ width: "100%" }}
-  	    />
-  	    <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-    	      Format: <code>CHAIN[:SEL]</code>. <code>SEL</code> can be a number, a range <code>N-M</code>, a comma list <code>n,m,k</code>,
-    	      or <code>*</code>/<code>all</code> for the entire chain. Separate items by commas or spaces.
-  	    </div>
-	  </MPNNField>
+              style={{ width: '100%' }}
+            />
+            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              Format: <code>CHAIN[:SEL]</code>. <code>SEL</code> can be a number, a range{' '}
+              <code>N-M</code>, a comma list <code>n,m,k</code>, or <code>*</code>/<code>all</code>{' '}
+              for the entire chain. Separate items by commas or spaces.
+            </div>
+          </MPNNField>
         </section>
       )}
 
-      <form onSubmit={handleSubmit} style={{ margin: "1rem 0" }}>
+      <form onSubmit={handleSubmit} style={{ margin: '1rem 0' }}>
         <button type="submit">Submit</button>
         <button
           type="button"
           style={{ marginLeft: 8 }}
           disabled={!jobId}
           onClick={() => {
-            setJobId("");
-            setStatus("idle");
-            setLogs("");
+            setJobId('');
+            setStatus('idle');
+            setLogs('');
             localStorage.removeItem(LS_JOB);
           }}
         >
@@ -509,43 +524,38 @@ export default function App() {
         </button>
       </form>
 
-      <section style={{ margin: "0.5rem 0 1rem" }}>
-        <div><strong>Job ID:</strong> {jobId || "—"}</div>
-        <div><strong>Status:</strong> {status}</div>
+      <section style={{ margin: '0.5rem 0 1rem' }}>
+        <div>
+          <strong>Job ID:</strong> {jobId || '—'}
+        </div>
+        <div>
+          <strong>Status:</strong> {status}
+        </div>
         <div style={{ marginTop: 8 }}>
-          <button
-            disabled={!canDownload || downloading}
-            onClick={() => handleDownload("full")}
-          >
+          <button disabled={!canDownload || downloading} onClick={() => handleDownload('full')}>
             {downloading
-              ? (downloadPct != null ? `Downloading… ${downloadPct}%` : "Downloading…")
-              : "Download results"}
+              ? downloadPct != null
+                ? `Downloading… ${downloadPct}%`
+                : 'Downloading…'
+              : 'Download results'}
           </button>
 
           {/* Optional: a smaller “lite” archive */}
           <button
             style={{ marginLeft: 8 }}
             disabled={!canDownload || downloading}
-            onClick={() => handleDownload("lite")}
+            onClick={() => handleDownload('lite')}
             title="Skips MSAs/PKLs for a much smaller download"
           >
-            {downloading ? "…" : "Download (lite)"}
+            {downloading ? '…' : 'Download (lite)'}
           </button>
 
           {downloading && (
             <div style={{ marginTop: 8 }}>
-              <progress
-                value={downloadPct ?? 0}
-                max="100"
-                style={{ width: "100%" }}
-              />
-              <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                {downloadPct != null ? `${downloadPct}%` : "Downloading… (size unknown)"}
-                <button
-                  type="button"
-                  onClick={cancelDownload}
-                  style={{ marginLeft: 8 }}
-                >
+              <progress value={downloadPct ?? 0} max="100" style={{ width: '100%' }} />
+              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                {downloadPct != null ? `${downloadPct}%` : 'Downloading… (size unknown)'}
+                <button type="button" onClick={cancelDownload} style={{ marginLeft: 8 }}>
                   Cancel
                 </button>
               </div>
@@ -554,21 +564,20 @@ export default function App() {
         </div>
       </section>
 
-
       {/* Logs */}
       <section>
         <strong>Logs</strong>
         <pre
           style={{
-            background: "#0b0b0b",
-            color: "#aefba8",
+            background: '#0b0b0b',
+            color: '#aefba8',
             padding: 12,
             minHeight: 180,
-            whiteSpace: "pre-wrap",
+            whiteSpace: 'pre-wrap',
             borderRadius: 8,
           }}
         >
-          {logs || "(waiting…)"}
+          {logs || '(waiting…)'}
         </pre>
       </section>
     </div>
