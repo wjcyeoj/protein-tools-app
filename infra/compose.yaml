@@ -3,7 +3,7 @@ services:
   api:
     build:
       context: ..
-      dockerfile: apps/api/Dockerfile
+      dockerfile: backend/Dockerfile
     environment:
       - PYTHONPATH=/app
       - AF_DB_DIR=/data/datasets/alphafold
