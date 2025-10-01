@@ -1,34 +1,51 @@
-frontend/node_modules/
-frontend/build/
-frontend/.env
-frontend/.env.local
-backend/.venv/
-backend/__pycache__/
-backend/*.pyc
-backend/.env
-appjobs/
-logs/
-*.log
-*.tgz
-*.zip
+# OS / editors
 .DS_Store
 Thumbs.db
-# dependencies
-**/node_modules
-# builds
-**/dist
-**/build
-.next
-# test/output
-coverage
-# env & logs
+*.swp
+*~
+.vscode/
+.idea/
+*.iml
+
+# Frontend (React)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+npm-debug.log*
+yarn-*.log
+pnpm-debug.log*
+.eslintcache
+
+# Backend (Python/FastAPI)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.coverage*
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Docker / env / logs
 .env
 .env.*
+!.env.example
 *.log
-npm-debug.log*
-yarn-error.log*
-# OS/editor
-.DS_Store
-*.bak
-*.orig
-*~
+
+# Runtime outputs
+jobs/
+results/
+**/outputs/
+*.tgz
+*.tar
+*.tar.gz
+*.zip
+
+# Misc
+tmp/
