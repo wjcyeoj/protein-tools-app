@@ -1,5 +1,7 @@
 // frontend/src/App.js
 import React, { useEffect, useRef, useState } from 'react';
+import Field from './components/Shared/Field';
+import FreezeSpecInput from './components/Controls/FreezeSpecInput';
 
 const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
@@ -59,8 +61,6 @@ export default function App() {
   const [status, setStatus] = useState('idle');
   const [logs, setLogs] = useState('');
   const pollRef = useRef(null);
-  const FREEZE_LS_KEY = 'ptools.freezeSpec';
-  const freezeInit = () => localStorage.getItem(FREEZE_LS_KEY) || '';
   const freezeRef = React.createRef();
   // let users choose file vs text for AlphaFold
   const [inputMode, setInputMode] = useState('file'); // "file" | "text"
@@ -270,25 +270,6 @@ export default function App() {
     };
   }, []);
 
-  function AFField({ label, children }) {
-    return (
-      <div style={{ marginBottom: 8 }}>
-        <label>
-          <strong>{label}:</strong> {children}
-        </label>
-      </div>
-    );
-  }
-  function MPNNField({ label, children }) {
-    return (
-      <div style={{ marginBottom: 8 }}>
-        <label>
-          <strong>{label}:</strong> {children}
-        </label>
-      </div>
-    );
-  }
-
   return (
     <div style={{ maxWidth: 960, margin: '2rem auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <h1 style={{ marginBottom: 6 }}>Protein Tools</h1>
@@ -383,7 +364,7 @@ export default function App() {
           style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}
         >
           <h3 style={{ marginTop: 0 }}>AlphaFold parameters</h3>
-          <AFField label="model_preset">
+          <Field label="model_preset">
             <select
               value={afParams.model_preset}
               onChange={(e) => setAfParams((p) => ({ ...p, model_preset: e.target.value }))}
@@ -391,8 +372,8 @@ export default function App() {
               <option value="monomer">monomer</option>
               <option value="multimer">multimer</option>
             </select>
-          </AFField>
-          <AFField label="db_preset">
+          </Field>
+          <Field label="db_preset">
             <select
               value={afParams.db_preset}
               onChange={(e) => setAfParams((p) => ({ ...p, db_preset: e.target.value }))}
@@ -400,15 +381,15 @@ export default function App() {
               <option value="full_dbs">full_dbs</option>
               <option value="reduced_dbs">reduced_dbs</option>
             </select>
-          </AFField>
-          <AFField label="max_template_date">
+          </Field>
+          <Field label="max_template_date">
             <input
               type="date"
               value={afParams.max_template_date}
               onChange={(e) => setAfParams((p) => ({ ...p, max_template_date: e.target.value }))}
             />
-          </AFField>
-          <AFField label="models_to_relax">
+          </Field>
+          <Field label="models_to_relax">
             <select
               value={afParams.models_to_relax}
               onChange={(e) => setAfParams((p) => ({ ...p, models_to_relax: e.target.value }))}
@@ -417,14 +398,14 @@ export default function App() {
               <option value="best">best</option>
               <option value="all">all</option>
             </select>
-          </AFField>
-          <AFField label="use_gpu_relax">
+          </Field>
+          <Field label="use_gpu_relax">
             <input
               type="checkbox"
               checked={!!afParams.use_gpu_relax}
               onChange={(e) => setAfParams((p) => ({ ...p, use_gpu_relax: e.target.checked }))}
             />
-          </AFField>
+          </Field>
           <div style={{ fontSize: 12, color: '#666' }}>
             Note: for multimer you don’t need <code>pdb70</code>; backend picks correct flags.
           </div>
@@ -436,7 +417,7 @@ export default function App() {
           style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}
         >
           <h3 style={{ marginTop: 0 }}>ProteinMPNN parameters</h3>
-          <MPNNField label="model_name">
+          <Field label="model_name">
             <select
               value={mpnnParams.model_name}
               onChange={(e) => setMpnnParams((p) => ({ ...p, model_name: e.target.value }))}
@@ -448,8 +429,8 @@ export default function App() {
               <option value="ca_48_010">ca_48_010</option>
               <option value="s_48_020">s_48_020</option>
             </select>
-          </MPNNField>
-          <MPNNField label="num_seq_per_target">
+          </Field>
+          <Field label="num_seq_per_target">
             <input
               type="number"
               min={1}
@@ -459,8 +440,8 @@ export default function App() {
                 setMpnnParams((p) => ({ ...p, num_seq_per_target: Number(e.target.value || 1) }))
               }
             />
-          </MPNNField>
-          <MPNNField label="batch_size">
+          </Field>
+          <Field label="batch_size">
             <input
               type="number"
               min={1}
@@ -470,8 +451,8 @@ export default function App() {
                 setMpnnParams((p) => ({ ...p, batch_size: Number(e.target.value || 1) }))
               }
             />
-          </MPNNField>
-          <MPNNField label="sampling_temp">
+          </Field>
+          <Field label="sampling_temp">
             <input
               type="number"
               step="0.01"
@@ -482,28 +463,8 @@ export default function App() {
                 setMpnnParams((p) => ({ ...p, sampling_temp: Number(e.target.value || 0.2) }))
               }
             />
-          </MPNNField>
-          <MPNNField label="Freeze residues (optional)">
-            <input
-              ref={freezeRef}
-              type="text"
-              defaultValue={freezeInit}
-              onInput={(e) => localStorage.setItem(FREEZE_LS_KEY, e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={`Examples:
-	  A:1-100        (freeze a range)
-	  B:* or B:all   (freeze whole chain)
-	  A:10,25,30     (freeze specific positions)
-	  A:1-50, B:all  (combine)`}
-              style={{ width: '100%' }}
-            />
-            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-              Format: <code>CHAIN[:SEL]</code>. <code>SEL</code> can be a number, a range{' '}
-              <code>N-M</code>, a comma list <code>n,m,k</code>, or <code>*</code>/<code>all</code>{' '}
-              for the entire chain. Separate items by commas or spaces.
-            </div>
-          </MPNNField>
+          </Field>
+            <FreezeSpecInput inputRef={freezeRef} />
         </section>
       )}
 
