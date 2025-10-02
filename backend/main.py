@@ -1,8 +1,8 @@
-import os, shlex, subprocess, time, uuid, json, sys
+import re, os, shlex, subprocess, time, uuid, json, sys
 from pathlib import Path
 from typing import Literal, Optional, Dict, Any
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import HTTPException, FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 
@@ -54,12 +54,48 @@ for d in (BASE_INPUT, BASE_OUTPUT, BASE_LOGS):
 # =========================
 # ---- HELPERS ----------
 # =========================
+SLUG_RE = re.compile(r"^[A-Za-z0-9._-]{1,60}$")
 
 def _now_ts() -> float:
     return time.time()
 
 def _safe_name(fn: str) -> str:
     return "".join(c for c in fn if c.isalnum() or c in ("-", "_", ".", "+")).strip()
+
+def clean_job_id(s: str) -> str:
+    """
+    Convert spaces to underscores, then enforce: letters, numbers, ., _, -, max length 60.
+    Raise 422 if invalid.
+    """
+    slug = re.sub(r"\s+", "_", (s or "").strip())
+    if not slug or not SLUG_RE.match(slug):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid job_id. Use letters, numbers, '.', '_', '-' (1–60 chars).",
+        )
+    return slug
+
+def job_exists(job_id: str) -> bool:
+    # check any of the per-job locations or in-memory registry
+    return (
+        (BASE_INPUT / job_id).exists()
+        or (BASE_OUTPUT / job_id).exists()
+        or (BASE_LOGS / f"{job_id}.log").exists()
+        or job_id in JOBS
+    )
+
+def ensure_job_id(requested: Optional[str]) -> str:
+    """
+    If user provided an id, clean + check for collision.
+    If not, generate an 8-char id like before.
+    """
+    if requested:
+        jid = clean_job_id(requested)
+        if job_exists(jid):
+            raise HTTPException(status_code=409, detail="Job ID already exists. Choose a different name.")
+        return jid
+    # fallback: keep your previous style (8 hex chars)
+    return uuid.uuid4().hex[:8]
 
 def _write_upload(dst: Path, uf: UploadFile):
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -314,8 +350,10 @@ def submit_job(
     mpnn_batch_size: int = Form(1),
     mpnn_sampling_temp: float = Form(0.1),
     mpnn_freeze_spec: Optional[str] = Form(None),
+
+    job_id: Optional[str] = Form(None),
 ):
-    job_id = uuid.uuid4().hex[:8]
+    job_id = ensure_job_id(job_id)
     in_dir = BASE_INPUT / job_id
     out_dir = BASE_OUTPUT / job_id
     log_path = BASE_LOGS / f"{job_id}.log"

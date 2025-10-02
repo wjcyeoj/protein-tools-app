@@ -15,12 +15,15 @@ const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
 const LS_MPNN = 'ptools.mpnnParams';
 const LS_JOB = 'ptools.currentJob';
+const LS_JOBNAME = 'ptools.jobName';
 
 export default function App() {
   const [tool, setTool] = useState(() => localStorage.getItem(LS_TOOL) || 'alphafold');
   const [file, setFile] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadPct, setDownloadPct] = useState(0); // 0–100, or null if unknown
+  const [jobName, setJobName] = useState(() => localStorage.getItem(LS_JOBNAME) || '');
+  useEffect(() => localStorage.setItem(LS_JOBNAME, jobName), [jobName]);
   const xhrRef = useRef(null);
 
   const [afParams, setAfParams] = useState(() => {
@@ -107,6 +110,10 @@ export default function App() {
     const freezeSpec = freezeRef.current?.value?.trim() || '';
     const body = new FormData();
     body.append('tool', tool);
+    if (jobName && jobName.trim()) {
+      body.append('job_id', jobName.trim()); // backend validates / dedupes
+    }
+
     body.append('file', fileToSend);
 
     if (tool === 'alphafold') {
@@ -146,6 +153,17 @@ export default function App() {
           </select>
         </label>
       </section>
+
+      <Field label="Job name (optional)">
+        <input
+          type="text"
+          value={jobName}
+          onChange={(e) => setJobName(e.target.value)}
+          placeholder="e.g., spike_protein_multimer_v2"
+          style={{ width: 320 }}
+          spellCheck={false}
+        />
+      </Field>
 
       {/* File chooser OR paste box */}
       <InputSection
