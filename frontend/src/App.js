@@ -9,6 +9,7 @@ import StatusBlock from './components/Results/StatusBlock';
 import LogsPanel from './components/Results/LogsPanel';
 import DownloadPanel from './components/Results/DownloadPanel';
 import useJob from './hooks/useJob';
+import { makeVirtualFastaFile } from './utils/fasta';
 
 const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
@@ -83,30 +84,13 @@ export default function App() {
     // Decide what file to send
     let fileToSend = file;
 
-    // For AlphaFold, if user chose "paste text" mode, convert it to a virtual FASTA file
     if (tool === 'alphafold' && inputMode === 'text') {
-      const raw = (seqText || '').trim();
-      if (!raw) {
-        alert('Please paste a FASTA or sequence.');
+      const f = makeVirtualFastaFile(seqText, seqName);
+      if (!f) {
+        alert('Please paste a valid FASTA or sequence.');
         return;
       }
-
-      // If it already looks like FASTA, use as-is; otherwise wrap as a single FASTA record
-      let fastaText;
-      if (raw.startsWith('>') || raw.includes('\n>')) {
-        fastaText = raw.endsWith('\n') ? raw : raw + '\n';
-      } else {
-        const seqOnly = raw.replace(/\s+/g, '');
-        if (!seqOnly) {
-          alert('No sequence letters found in the pasted text.');
-          return;
-        }
-        const header = (seqName || 'sequence').trim() || 'sequence';
-        fastaText = `>${header}\n${seqOnly}\n`;
-      }
-
-      const safeName = (seqName || 'sequence').replace(/[^A-Za-z0-9_.-]+/g, '_');
-      fileToSend = new File([fastaText], `${safeName}.fasta`, { type: 'text/plain' });
+      fileToSend = f;
     }
 
     // Validate inputs per tool
