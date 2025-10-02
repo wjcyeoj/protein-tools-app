@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Field from './components/Shared/Field';
 import FreezeSpecInput from './components/Controls/FreezeSpecInput';
+import AlphaFoldParams from './components/Controls/AlphaFoldParams';
 
 const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
@@ -360,56 +361,7 @@ export default function App() {
       </section>
 
       {tool === 'alphafold' && (
-        <section
-          style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}
-        >
-          <h3 style={{ marginTop: 0 }}>AlphaFold parameters</h3>
-          <Field label="model_preset">
-            <select
-              value={afParams.model_preset}
-              onChange={(e) => setAfParams((p) => ({ ...p, model_preset: e.target.value }))}
-            >
-              <option value="monomer">monomer</option>
-              <option value="multimer">multimer</option>
-            </select>
-          </Field>
-          <Field label="db_preset">
-            <select
-              value={afParams.db_preset}
-              onChange={(e) => setAfParams((p) => ({ ...p, db_preset: e.target.value }))}
-            >
-              <option value="full_dbs">full_dbs</option>
-              <option value="reduced_dbs">reduced_dbs</option>
-            </select>
-          </Field>
-          <Field label="max_template_date">
-            <input
-              type="date"
-              value={afParams.max_template_date}
-              onChange={(e) => setAfParams((p) => ({ ...p, max_template_date: e.target.value }))}
-            />
-          </Field>
-          <Field label="models_to_relax">
-            <select
-              value={afParams.models_to_relax}
-              onChange={(e) => setAfParams((p) => ({ ...p, models_to_relax: e.target.value }))}
-            >
-              <option value="none">none</option>
-              <option value="best">best</option>
-              <option value="all">all</option>
-            </select>
-          </Field>
-          <Field label="use_gpu_relax">
-            <input
-              type="checkbox"
-              checked={!!afParams.use_gpu_relax}
-              onChange={(e) => setAfParams((p) => ({ ...p, use_gpu_relax: e.target.checked }))}
-            />
-          </Field>
-          <div style={{ fontSize: 12, color: '#666' }}>
-            Note: for multimer you don’t need <code>pdb70</code>; backend picks correct flags.
-          </div>
-        </section>
+        <AlphaFoldParams params={afParams} setParams={setAfParams} />
       )}
 
       {tool === 'proteinmpnn' && (
