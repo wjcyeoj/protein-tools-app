@@ -5,6 +5,8 @@ import FreezeSpecInput from './components/Controls/FreezeSpecInput';
 import AlphaFoldParams from './components/Controls/AlphaFoldParams';
 import ProteinMpnnParams from './components/Controls/ProteinMpnnParams';
 import InputSection from './components/Controls/InputSection';
+import StatusBlock from './components/Results/StatusBlock';
+import LogsPanel from './components/Results/LogsPanel';
 
 const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
@@ -331,13 +333,7 @@ export default function App() {
         </button>
       </form>
 
-      <section style={{ margin: '0.5rem 0 1rem' }}>
-        <div>
-          <strong>Job ID:</strong> {jobId || '—'}
-        </div>
-        <div>
-          <strong>Status:</strong> {status}
-        </div>
+      <StatusBlock jobId={jobId} status={status} />
         <div style={{ marginTop: 8 }}>
           <button disabled={!canDownload || downloading} onClick={() => handleDownload('full')}>
             {downloading
@@ -369,24 +365,9 @@ export default function App() {
             </div>
           )}
         </div>
-      </section>
 
       {/* Logs */}
-      <section>
-        <strong>Logs</strong>
-        <pre
-          style={{
-            background: '#0b0b0b',
-            color: '#aefba8',
-            padding: 12,
-            minHeight: 180,
-            whiteSpace: 'pre-wrap',
-            borderRadius: 8,
-          }}
-        >
-          {logs || '(waiting…)'}
-        </pre>
-      </section>
+      <LogsPanel logs={logs} />
     </div>
   );
 }
