@@ -8,6 +8,7 @@ import InputSection from './components/Controls/InputSection';
 import StatusBlock from './components/Results/StatusBlock';
 import LogsPanel from './components/Results/LogsPanel';
 import DownloadPanel from './components/Results/DownloadPanel';
+import useJob from './hooks/useJob';
 
 const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
@@ -63,10 +64,7 @@ export default function App() {
     }
   });
 
-  const [jobId, setJobId] = useState('');
-  const [status, setStatus] = useState('idle');
-  const [logs, setLogs] = useState('');
-  const pollRef = useRef(null);
+  const { jobId, status, logs, canDownload, submit, clearJob } = useJob();
   const freezeRef = React.createRef();
   // let users choose file vs text for AlphaFold
   const [inputMode, setInputMode] = useState('file'); // "file" | "text"
@@ -77,15 +75,6 @@ export default function App() {
   useEffect(() => localStorage.setItem(LS_TOOL, tool), [tool]);
   useEffect(() => localStorage.setItem(LS_AF, JSON.stringify(afParams)), [afParams]);
   useEffect(() => localStorage.setItem(LS_MPNN, JSON.stringify(mpnnParams)), [mpnnParams]);
-
-  // reattach to an in-flight job after refresh
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(LS_JOB) || 'null');
-    if (saved?.id) {
-      setJobId(saved.id);
-      if (saved.tool) setTool(saved.tool);
-    }
-  }, []);
 
   // Submit job (send individual fields the backend expects)
   async function handleSubmit(e) {
@@ -150,57 +139,12 @@ export default function App() {
       if (freezeSpec) body.append('mpnn_freeze_spec', freezeSpec);
     }
 
-    setStatus('running');
-    setLogs('');
-    setJobId('');
     try {
-      const res = await fetch('/jobs', { method: 'POST', body });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`Submit failed (${res.status}): ${t}`);
-      }
-      const { job_id } = await res.json();
-      setJobId(job_id);
-      localStorage.setItem(LS_JOB, JSON.stringify({ id: job_id, tool }));
+      await submit(body); // starts polling and stores job id
     } catch (err) {
-      setStatus('error');
       alert(err.message);
     }
   }
-
-  // Poll status + logs (parse JSON from /logs)
-  useEffect(() => {
-    if (!jobId) return;
-
-    async function tick() {
-      try {
-        const s = await fetch(`/jobs/${jobId}`);
-        if (s.ok) {
-          const js = await s.json();
-          setStatus(js.status);
-          // if finished/failed, clear the “current job” marker
-          if (js.status && js.status !== 'running') {
-            localStorage.removeItem(LS_JOB);
-          }
-        }
-        const l = await fetch(`/jobs/${jobId}/logs?tail=400`);
-        if (l.ok) {
-          const j = await l.json(); // backend returns { log: "..." }
-          // optional cleanup: collapse excessive separators
-          const cleaned = (j.log || '').replace(/(\n[-=]{3,}\n)+/g, '\n');
-          setLogs(cleaned);
-        }
-      } catch {
-        // ignore transient errors
-      }
-    }
-
-    tick();
-    pollRef.current = setInterval(tick, 2500);
-    return () => clearInterval(pollRef.current);
-  }, [jobId]);
-
-  const canDownload = jobId && status === 'finished';
 
   return (
     <div style={{ maxWidth: 960, margin: '2rem auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -249,19 +193,14 @@ export default function App() {
           type="button"
           style={{ marginLeft: 8 }}
           disabled={!jobId}
-          onClick={() => {
-            setJobId('');
-            setStatus('idle');
-            setLogs('');
-            localStorage.removeItem(LS_JOB);
-          }}
+          onClick={clearJob}
         >
           Clear job
         </button>
       </form>
 
       <StatusBlock jobId={jobId} status={status} />
-      <DownloadPanel jobId={jobId} canDownload={!!jobId && status === 'finished'} />
+      <DownloadPanel jobId={jobId} canDownload={canDownload} />
 
       {/* Logs */}
       <LogsPanel logs={logs} />
