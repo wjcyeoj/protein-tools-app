@@ -7,6 +7,7 @@ import ProteinMpnnParams from './components/Controls/ProteinMpnnParams';
 import InputSection from './components/Controls/InputSection';
 import StatusBlock from './components/Results/StatusBlock';
 import LogsPanel from './components/Results/LogsPanel';
+import DownloadPanel from './components/Results/DownloadPanel';
 
 const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
@@ -201,80 +202,6 @@ export default function App() {
 
   const canDownload = jobId && status === 'finished';
 
-  async function handleDownload(mode = 'full') {
-    if (!canDownload || downloading) return;
-
-    setDownloading(true);
-    setDownloadPct(0);
-
-    const url = `/jobs/${jobId}/download?mode=${mode}`;
-    const xhr = new XMLHttpRequest();
-    xhrRef.current = xhr;
-
-    xhr.open('GET', url, true);
-    xhr.responseType = 'blob';
-
-    // Fires repeatedly as bytes arrive
-    xhr.onprogress = (evt) => {
-      if (evt.lengthComputable) {
-        const pct = Math.round((evt.loaded / evt.total) * 100);
-        setDownloadPct(pct);
-      } else {
-        // Backend didn’t send Content-Length (shouldn’t happen with /download, but just in case)
-        setDownloadPct(null);
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        const dispo = xhr.getResponseHeader('content-disposition') || '';
-        const m = dispo.match(/filename="?([^"]+)"?/);
-        const filename = m?.[1] || `${jobId}.tgz`;
-
-        const blobUrl = URL.createObjectURL(xhr.response);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(blobUrl);
-      } else {
-        alert(`Download failed: HTTP ${xhr.status}`);
-      }
-      setDownloading(false);
-      setDownloadPct(0);
-      xhrRef.current = null;
-    };
-
-    xhr.onerror = () => {
-      alert('Network error during download');
-      setDownloading(false);
-      setDownloadPct(0);
-      xhrRef.current = null;
-    };
-
-    xhr.onabort = () => {
-      setDownloading(false);
-      setDownloadPct(0);
-      xhrRef.current = null;
-    };
-
-    xhr.send();
-  }
-
-  function cancelDownload() {
-    if (xhrRef.current) xhrRef.current.abort();
-  }
-
-  // Clean up any in-flight XHR when unmounting
-  useEffect(() => {
-    return () => {
-      if (xhrRef.current) xhrRef.current.abort();
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
-
   return (
     <div style={{ maxWidth: 960, margin: '2rem auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <h1 style={{ marginBottom: 6 }}>Protein Tools</h1>
@@ -334,37 +261,7 @@ export default function App() {
       </form>
 
       <StatusBlock jobId={jobId} status={status} />
-        <div style={{ marginTop: 8 }}>
-          <button disabled={!canDownload || downloading} onClick={() => handleDownload('full')}>
-            {downloading
-              ? downloadPct != null
-                ? `Downloading… ${downloadPct}%`
-                : 'Downloading…'
-              : 'Download results'}
-          </button>
-
-          {/* Optional: a smaller “lite” archive */}
-          <button
-            style={{ marginLeft: 8 }}
-            disabled={!canDownload || downloading}
-            onClick={() => handleDownload('lite')}
-            title="Skips MSAs/PKLs for a much smaller download"
-          >
-            {downloading ? '…' : 'Download (lite)'}
-          </button>
-
-          {downloading && (
-            <div style={{ marginTop: 8 }}>
-              <progress value={downloadPct ?? 0} max="100" style={{ width: '100%' }} />
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                {downloadPct != null ? `${downloadPct}%` : 'Downloading… (size unknown)'}
-                <button type="button" onClick={cancelDownload} style={{ marginLeft: 8 }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <DownloadPanel jobId={jobId} canDownload={!!jobId && status === 'finished'} />
 
       {/* Logs */}
       <LogsPanel logs={logs} />
