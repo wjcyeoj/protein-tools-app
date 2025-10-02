@@ -4,6 +4,7 @@ import Field from './components/Shared/Field';
 import FreezeSpecInput from './components/Controls/FreezeSpecInput';
 import AlphaFoldParams from './components/Controls/AlphaFoldParams';
 import ProteinMpnnParams from './components/Controls/ProteinMpnnParams';
+import InputSection from './components/Controls/InputSection';
 
 const LS_TOOL = 'ptools.tool';
 const LS_AF = 'ptools.afParams';
@@ -290,76 +291,17 @@ export default function App() {
       </section>
 
       {/* File chooser OR paste box */}
-      <section style={{ margin: '1rem 0' }}>
-        {/* Only AlphaFold gets the mode toggle */}
-        {tool === 'alphafold' && (
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ marginRight: 12 }}>
-              <input
-                type="radio"
-                name="af-input-mode"
-                value="file"
-                checked={inputMode === 'file'}
-                onChange={() => setInputMode('file')}
-              />{' '}
-              Upload FASTA file
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="af-input-mode"
-                value="text"
-                checked={inputMode === 'text'}
-                onChange={() => setInputMode('text')}
-              />{' '}
-              Paste FASTA / sequence
-            </label>
-          </div>
-        )}
-
-        {tool === 'alphafold' && inputMode === 'text' ? (
-          <>
-            <div style={{ marginBottom: 8 }}>
-              <label>
-                <strong>Sequence name</strong>{' '}
-                <input
-                  type="text"
-                  value={seqName}
-                  onChange={(e) => setSeqName(e.target.value)}
-                  style={{ width: 220 }}
-                />
-              </label>
-            </div>
-
-            <textarea
-              rows={10}
-              placeholder={`>chain_A
-      MKTAYIAK...
-      >chain_B
-      GHHHHHH...`}
-              value={seqText}
-              onChange={(e) => setSeqText(e.target.value)}
-              style={{ width: '100%', fontFamily: 'monospace' }}
-            />
-
-            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-              Paste a full FASTA (multiple <code>&gt;</code> headers allowed for multimer) or a
-              single raw sequence. Raw sequences will be wrapped as <code>&gt;{seqName}</code>.
-            </div>
-          </>
-        ) : (
-          <>
-            <input
-              type="file"
-              accept={tool === 'alphafold' ? '.fa,.fasta' : '.pdb,.cif'}
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-            />
-            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-              {tool === 'alphafold' ? 'Upload FASTA (.fa/.fasta)' : 'Upload PDB/CIF (.pdb/.cif)'}
-            </div>
-          </>
-        )}
-      </section>
+      <InputSection
+        tool={tool}
+        file={file}
+        setFile={setFile}
+        inputMode={inputMode}
+        setInputMode={setInputMode}
+        seqName={seqName}
+        setSeqName={setSeqName}
+        seqText={seqText}
+        setSeqText={setSeqText}
+      />
 
       {tool === 'alphafold' && (
         <AlphaFoldParams params={afParams} setParams={setAfParams} />
