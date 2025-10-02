@@ -55,6 +55,7 @@ for d in (BASE_INPUT, BASE_OUTPUT, BASE_LOGS):
 # ---- HELPERS ----------
 # =========================
 SLUG_RE = re.compile(r"^[A-Za-z0-9._-]{1,60}$")
+ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 def _now_ts() -> float:
     return time.time()
@@ -322,6 +323,106 @@ def _parse_freeze_spec(pdb_path: Path, spec: str) -> Dict[str, list[int]]:
 
     return {ch: sorted(v) for ch, v in out.items() if v}
 
+
+def _fasta_records(text: str):
+    """Yield (header, seq) tuples from FASTA text."""
+    header, seq_lines = None, []
+    for line in (text or "").splitlines():
+        if line.startswith(">"):
+            if header is not None:
+                yield header, "".join(seq_lines).replace(" ", "").strip()
+            header, seq_lines = line[1:].strip(), []
+        else:
+            seq_lines.append(line.strip())
+    if header is not None:
+        yield header, "".join(seq_lines).replace(" ", "").strip()
+
+def _guess_chain_from_header(h: str, fallback_idx: int) -> str:
+    """
+    Try to infer a chain letter/ID from the FASTA header, else A/B/C...
+    Examples it will recognize: 'chain A', 'chain_A', 'A:', '[A]', '/A'
+    """
+    m = re.search(r"(?:^|\b|[_/\-\[\(])chain[_\s:-]*([A-Za-z0-9])\b", h, re.I)
+    if not m:
+        m = re.search(r"(?:^|\b|[_/\-\[\(])([A-Za-z0-9])(?:\b|[:\]])", h)
+    return (m.group(1).upper() if m else ALPHABET[fallback_idx % len(ALPHABET)])
+
+def _parse_fasta_positions(text: str) -> dict:
+    """
+    Return per-chain stats for one or more FASTA records.
+    If only one record: chain id defaults to 'A' unless header hints otherwise.
+    """
+    recs = list(_fasta_records(text))
+    if not recs:
+        return {"chains": [], "totals": {"length": 0, "cysteines": 0, "lysines": 0}}
+
+    chains = []
+    for i, (hdr, seq) in enumerate(recs):
+        chain_id = _guess_chain_from_header(hdr, i if len(recs) > 1 else 0)
+        # Force single FASTA to be A unless header explicitly says otherwise
+        if len(recs) == 1 and not re.search(r"chain", hdr, re.I):
+            chain_id = "A"
+
+        cys = [pos + 1 for pos, aa in enumerate(seq) if aa.upper() == "C"]
+        lys = [pos + 1 for pos, aa in enumerate(seq) if aa.upper() == "K"]
+        chains.append({
+            "id": chain_id,
+            "length": len(seq),
+            "cysteines": cys,
+            "lysines": lys,
+        })
+
+    totals = {
+        "length": sum(c["length"] for c in chains),
+        "cysteines": sum(len(c["cysteines"]) for c in chains),
+        "lysines": sum(len(c["lysines"]) for c in chains),
+    }
+    return {"chains": chains, "totals": totals}
+
+def _parse_pdb_positions(path: Path) -> dict:
+    """
+    From a PDB, build per-chain stats based on ATOM/HETATM residue records.
+    length = count of distinct residue numbers per chain.
+    """
+    chain_resis = {}   # chain -> set(resSeq)
+    chain_cys = {}     # chain -> set(resSeq)
+    chain_lys = {}     # chain -> set(resSeq)
+
+    with open(path) as f:
+        for line in f:
+            if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                continue
+            resn = line[17:20].strip().upper()
+            chain = (line[21] or "_").strip() or "_"
+            try:
+                resi = int(line[22:26])
+            except ValueError:
+                continue
+            chain_resis.setdefault(chain, set()).add(resi)
+            if resn == "CYS":
+                chain_cys.setdefault(chain, set()).add(resi)
+            elif resn == "LYS":
+                chain_lys.setdefault(chain, set()).add(resi)
+
+    chains = []
+    for ch in sorted(chain_resis.keys()):
+        resis = sorted(chain_resis[ch])
+        cys = sorted(chain_cys.get(ch, set()))
+        lys = sorted(chain_lys.get(ch, set()))
+        chains.append({
+            "id": ch,
+            "length": len(resis),
+            "cysteines": cys,
+            "lysines": lys,
+        })
+
+    totals = {
+        "length": sum(c["length"] for c in chains),
+        "cysteines": sum(len(c["cysteines"]) for c in chains),
+        "lysines": sum(len(c["lysines"]) for c in chains),
+    }
+    return {"chains": chains, "totals": totals}
+
 # =========================
 # ---- ENDPOINTS ----------
 # =========================
@@ -332,7 +433,7 @@ def health():
 
 @app.post("/jobs")
 def submit_job(
-    tool: Literal["alphafold", "proteinmpnn"] = Form(...),
+    tool: Literal["alphafold", "proteinmpnn", "residueid"] = Form(...),
     file: UploadFile = File(...),
 
     # AlphaFold knobs
@@ -428,7 +529,7 @@ def submit_job(
         )
         _launch(docker, log_path, job_id)
 
-    else:  # proteinmpnn
+    elif tool == "proteinmpnn":
         py = sys.executable
 
         if not MPNN_SCRIPT.exists():
@@ -473,6 +574,34 @@ def submit_job(
         with open(log_path, "a") as lf:
             lf.write(f"MPNN CMD: {cmd}\n")
         _launch(cmd, log_path, job_id)
+
+    elif tool == "residueid":
+        ext = src_path.suffix.lower()
+        with open(log_path, "a") as lf:
+            lf.write(f"[residueid] parsing {src_path.name} (ext={ext})\n")
+
+        if ext in [".fa", ".fasta"]:
+            results = _parse_fasta_positions(src_path.read_text())
+        elif ext == ".pdb":
+            results = _parse_pdb_positions(src_path)
+        else:
+            return JSONResponse(
+                {"detail": "Unsupported file type for residueid (use .fa/.fasta or .pdb)"},
+                status_code=400,
+            )
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_json = out_dir / "residues.json"
+        out_json.write_text(json.dumps(results, indent=2))
+
+        # Expose and finish synchronously
+        JOBS[job_id]["result_data"] = results
+        JOBS[job_id]["status"] = "finished"
+
+        with open(log_path, "a") as lf:
+            chain_str = ",".join(c["id"] for c in results["chains"])
+            lf.write(f"[residueid] chains=[{chain_str}] "
+                     f"C={results['totals']['cysteines']} K={results['totals']['lysines']}\n")
 
     return {"job_id": job_id, "status": "queued"}
 

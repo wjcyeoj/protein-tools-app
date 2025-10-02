@@ -25,6 +25,18 @@ export default function App() {
   const [jobName, setJobName] = useState(() => localStorage.getItem(LS_JOBNAME) || '');
   useEffect(() => localStorage.setItem(LS_JOBNAME, jobName), [jobName]);
   const xhrRef = useRef(null);
+  const { jobId, status, logs, canDownload, submit, clearJob } = useJob();
+  const [resultData, setResultData] = useState(null);
+  useEffect(() => {
+    if (tool === 'residueid' && jobId && status === 'finished') {
+      fetch(`/jobs/${jobId}`)
+        .then(r => (r.ok ? r.json() : Promise.reject()))
+        .then(info => setResultData(info.result_data || null))
+        .catch(() => setResultData(null));
+    } else if (tool !== 'residueid') {
+      setResultData(null);
+    }
+  }, [tool, jobId, status]);
 
   const [afParams, setAfParams] = useState(() => {
     try {
@@ -68,7 +80,6 @@ export default function App() {
     }
   });
 
-  const { jobId, status, logs, canDownload, submit, clearJob } = useJob();
   const freezeRef = React.createRef();
   // let users choose file vs text for AlphaFold
   const [inputMode, setInputMode] = useState('file'); // "file" | "text"
@@ -103,6 +114,10 @@ export default function App() {
     }
     if (tool === 'alphafold' && !fileToSend) {
       alert('Please choose a FASTA file or paste a sequence.');
+      return;
+    }
+    if (tool === 'residueid' && !fileToSend) {
+      alert('Please choose a FASTA or PDB file (or paste a FASTA sequence).');
       return;
     }
 
@@ -150,6 +165,7 @@ export default function App() {
           <select value={tool} onChange={(e) => setTool(e.target.value)}>
             <option value="alphafold">AlphaFold</option>
             <option value="proteinmpnn">ProteinMPNN</option>
+            <option value="residueid">Residue Identifier</option>
           </select>
         </label>
       </section>
@@ -206,6 +222,24 @@ export default function App() {
 
       {/* Logs */}
       <LogsPanel logs={logs} />
+
+      {tool === 'residueid' && status === 'finished' && resultData?.chains?.length > 0 && (
+        <section style={{ marginTop: 12 }}>
+          <strong>Residue summary</strong>
+          <div style={{ marginTop: 6 }}>
+            {resultData.chains.map((c) => (
+              <div key={c.id} style={{ marginBottom: 8 }}>
+                <div><b>Chain {c.id}</b> — length: {c.length}</div>
+                <div>Cysteines: {c.cysteines.length ? c.cysteines.join(', ') : 'none'}</div>
+                <div>Lysines: {c.lysines.length ? c.lysines.join(', ') : 'none'}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 12, color: '#666' }}>
+              Totals — length: {resultData.totals.length}, C: {resultData.totals.cysteines}, K: {resultData.totals.lysines}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

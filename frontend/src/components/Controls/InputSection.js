@@ -10,14 +10,19 @@ export default function InputSection({
   seqText,
   setSeqText,
 }) {
-  const fileAccept = tool === 'alphafold' ? '.fa,.fasta' : '.pdb,.cif';
-  const isAF = tool === 'alphafold';
-  const useText = isAF && inputMode === 'text';
+  const fileAccept =
+    tool === 'alphafold'
+      ? '.fa,.fasta'
+      : tool === 'proteinmpnn'
+      ? '.pdb,.cif'
+      : '.fa,.fasta,.pdb'; // residueid
+  const allowText = tool === 'alphafold' || tool === 'residueid';
+  const useText = allowText && inputMode === 'text';
 
   return (
     <section style={{ margin: '1rem 0' }}>
       {/* Mode toggle only for AlphaFold */}
-      {isAF && (
+      {allowText && (
         <div style={{ marginBottom: 8 }}>
           <label style={{ marginRight: 12 }}>
             <input
@@ -80,7 +85,11 @@ GHHHHHH...`}
             onChange={(e) => setFile(e.target.files?.[0] || null)}
           />
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            {isAF ? 'Upload FASTA (.fa/.fasta)' : 'Upload PDB/CIF (.pdb/.cif)'}
+            {tool === 'alphafold'
+              ? 'Upload FASTA (.fa/.fasta)'
+              : tool === 'proteinmpnn'
+              ? 'Upload PDB/CIF (.pdb/.cif)'
+              : 'Upload FASTA (.fa/.fasta) or PDB (.pdb)'}
           </div>
         </>
       )}
