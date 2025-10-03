@@ -27,16 +27,24 @@ export default function App() {
   const xhrRef = useRef(null);
   const { jobId, status, logs, canDownload, submit, clearJob } = useJob();
   const [resultData, setResultData] = useState(null);
+  const [resultTool, setResultTool] = useState(null);
   useEffect(() => {
-    if ((tool === 'residueid' || tool === 'msa') && jobId && status === 'finished') {
+    if (jobId && status === 'finished') {
       fetch(`/jobs/${jobId}`)
         .then(r => (r.ok ? r.json() : Promise.reject()))
-        .then(info => setResultData(info.result_data || null))
-        .catch(() => setResultData(null));
+        .then(info => {
+          setResultData(info.result_data || null);
+          setResultTool(info.tool || null);
+        })
+        .catch(() => {
+          setResultData(null);
+          setResultTool(null);
+        });
     } else {
       setResultData(null);
+      setResultTool(null);
     }
-  }, [tool, jobId, status]);
+  }, [jobId, status]);
 
   const [afParams, setAfParams] = useState(() => {
     try {
@@ -98,7 +106,7 @@ export default function App() {
     // Decide what file to send
     let fileToSend = file;
 
-    if (tool === 'alphafold' && inputMode === 'text') {
+    if ((tool === 'alphafold' || tool === 'residueid' || tool === 'msa') && inputMode === 'text') {
       const f = makeVirtualFastaFile(seqText, seqName);
       if (!f) {
         alert('Please paste a valid FASTA or sequence.');
@@ -120,8 +128,8 @@ export default function App() {
       alert('Please choose a FASTA or PDB file (or paste a FASTA sequence).');
       return;
     }
-    if (tool === 'msa' && !fileToSend && inputMode !== 'text') {
-      alert('Upload or paste a multi-FASTA for the MSA tool.');
+    if (tool === 'msa' && !fileToSend) {
+      alert('Please choose a FASTA or PDB file (or paste a FASTA sequence).');
       return;
     }
 
@@ -228,7 +236,8 @@ export default function App() {
       {/* Logs */}
       <LogsPanel logs={logs} />
 
-      {tool === 'residueid' && status === 'finished' && resultData?.chains?.length > 0 && (
+      {/* Residue Identifier summary */}
+      {resultTool === 'residueid' && resultData?.chains?.length > 0 && (
         <section style={{ marginTop: 12 }}>
           <strong>Residue summary</strong>
           <div style={{ marginTop: 6 }}>
@@ -246,7 +255,8 @@ export default function App() {
         </section>
       )}
 
-      {tool === 'msa' && status === 'finished' && resultData && (
+      {/* MSA summary */}
+      {resultTool === 'msa' && resultData && (
         <section style={{ marginTop: 12 }}>
           <strong>Conserved positions</strong>
           <div style={{ fontSize: 12, color: '#666' }}>
@@ -256,25 +266,10 @@ export default function App() {
           <div style={{ marginTop: 8 }}>
             {Array.isArray(resultData.conserved) && resultData.conserved.length ? (
               <>
-                <div style={{ marginBottom: 6 }}>
-                  Count: {resultData.conserved.length}
-                </div>
-                <table style={{ borderCollapse:'collapse', marginTop:8, fontSize:14 }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign:'left', padding:'6px 8px', borderBottom:'1px solid #ddd' }}>Position</th>
-                      <th style={{ textAlign:'left', padding:'6px 8px', borderBottom:'1px solid #ddd' }}>Residue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resultData.conserved.map(c => (
-                      <tr key={c.position}>
-                        <td style={{ padding:'6px 8px', borderBottom:'1px solid #eee' }}>{c.position}</td>
-                        <td style={{ padding:'6px 8px', borderBottom:'1px solid #eee' }}>{c.residue}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div style={{ marginBottom: 6 }}>Count: {resultData.conserved.length}</div>
+                <pre style={{ background:'#f6f6f6', padding:12, borderRadius:8, whiteSpace:'pre-wrap' }}>
+                  {resultData.conserved.map(c => `${c.position}:${c.residue}`).join(', ')}
+                </pre>
               </>
             ) : (
               <div>No fully conserved columns found.</div>
