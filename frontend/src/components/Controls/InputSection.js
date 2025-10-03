@@ -11,12 +11,11 @@ export default function InputSection({
   setSeqText,
 }) {
   const fileAccept =
-    tool === 'alphafold'
-      ? '.fa,.fasta'
-      : tool === 'proteinmpnn'
-      ? '.pdb,.cif'
-      : '.fa,.fasta,.pdb'; // residueid
-  const allowText = tool === 'alphafold' || tool === 'residueid';
+    tool === 'alphafold' ? '.fa,.fasta' :
+    tool === 'proteinmpnn' ? '.pdb,.cif' :
+    tool === 'residueid' ? '.fa,.fasta,.pdb' :
+    '.fa,.fasta';
+  const allowText = tool === 'alphafold' || tool === 'residueid' || tool === 'msa';
   const useText = allowText && inputMode === 'text';
 
   return (

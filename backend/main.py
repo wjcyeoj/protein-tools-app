@@ -1,4 +1,4 @@
-import re, os, shlex, subprocess, time, uuid, json, sys
+import shutil, tempfile, re, os, shlex, subprocess, time, uuid, json, sys
 from pathlib import Path
 from typing import Literal, Optional, Dict, Any
 
@@ -423,6 +423,62 @@ def _parse_pdb_positions(path: Path) -> dict:
     }
     return {"chains": chains, "totals": totals}
 
+def _fasta_records(text: str):
+    header, seq = None, []
+    for line in (text or "").splitlines():
+        if line.startswith(">"):
+            if header is not None:
+                yield header, "".join(seq).replace(" ", "")
+            header, seq = line[1:].strip(), []
+        else:
+            seq.append(line.strip())
+    if header is not None:
+        yield header, "".join(seq).replace(" ", "")
+
+def _read_fasta_file(path: Path):
+    return list(_fasta_records(path.read_text()))
+
+def _muscle_align_if_available(src_fasta: Path) -> list[tuple[str, str]]:
+    """
+    If 'muscle' is installed, align sequences and return [(hdr, aligned_seq), ...].
+    Otherwise, return the original records (unaligned).
+    """
+    muscle = shutil.which("muscle")
+    if not muscle:
+        return _read_fasta_file(src_fasta)
+
+    with tempfile.TemporaryDirectory() as tmpd:
+        out = Path(tmpd) / "aligned.fasta"
+        # MUSCLE 5+: `-align in -output out -quiet`
+        cmd = f"{muscle} -align {shlex.quote(str(src_fasta))} -output {shlex.quote(str(out))} -quiet"
+        subprocess.run(["bash", "-lc", cmd], check=True)
+        return _read_fasta_file(out)
+
+def _conserved_columns(records: list[tuple[str, str]], ignore_gaps=True):
+    """
+    records: [(header, seq/aligned_seq), ...]
+    Returns positions (1-based) where all sequences have the same letter (A-Z),
+    optionally ignoring columns with any gap ('-').
+    """
+    if not records:
+        return {"n_sequences": 0, "aligned_length": 0, "conserved": []}
+    seqs = [s.upper() for _, s in records]
+    Ls = [len(s) for s in seqs]
+    L = Ls[0]
+    if any(l != L for l in Ls):
+        # not aligned; caller should align first
+        return {"n_sequences": len(seqs), "aligned_length": 0, "conserved": []}
+
+    conserved = []
+    for i in range(L):
+        col = [s[i] for s in seqs]
+        if ignore_gaps and any(c == "-" for c in col):
+            continue
+        aa = col[0]
+        if aa.isalpha() and all(c == aa for c in col):
+            conserved.append({"position": i + 1, "residue": aa})
+    return {"n_sequences": len(seqs), "aligned_length": L, "conserved": conserved}
+
 # =========================
 # ---- ENDPOINTS ----------
 # =========================
@@ -433,7 +489,7 @@ def health():
 
 @app.post("/jobs")
 def submit_job(
-    tool: Literal["alphafold", "proteinmpnn", "residueid"] = Form(...),
+    tool: Literal["alphafold", "proteinmpnn", "residueid", "msa"] = Form(...),
     file: UploadFile = File(...),
 
     # AlphaFold knobs
@@ -602,6 +658,51 @@ def submit_job(
             chain_str = ",".join(c["id"] for c in results["chains"])
             lf.write(f"[residueid] chains=[{chain_str}] "
                      f"C={results['totals']['cysteines']} K={results['totals']['lysines']}\n")
+
+    elif tool == "msa":
+        # Save upload (already done above: src_path points to the uploaded file)
+        ext = src_path.suffix.lower()
+        if ext not in [".fa", ".fasta"]:
+            return JSONResponse({"detail": "Upload a multi-FASTA (.fa/.fasta) with ≥2 sequences."}, status_code=400)
+
+        # Try to align with MUSCLE if present; otherwise, use as-is
+        try:
+            recs = _muscle_align_if_available(src_path)
+        except subprocess.CalledProcessError as e:
+            with open(log_path, "a") as lf:
+                lf.write(f"[msa] MUSCLE failed: {e}\n")
+            recs = _read_fasta_file(src_path)
+
+        # If still misaligned (different lengths), we can't compute strict column conservation
+        # Produce empty result with a note
+        if not recs or len(recs) < 2:
+            result = {"note": "Need at least two sequences", "n_sequences": len(recs), "aligned_length": 0, "conserved": []}
+        else:
+            # ensure sequences are same length; if not, report no conserved columns
+            same_len = len(set(len(s) for _, s in recs)) == 1
+            if same_len:
+                result = _conserved_columns(recs, ignore_gaps=True)
+            else:
+                result = {"note": "Sequences not aligned; install MUSCLE to auto-align", "n_sequences": len(recs), "aligned_length": 0, "conserved": []}
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_json = out_dir / "msa_conserved.json"
+        out_json.write_text(json.dumps(result, indent=2))
+
+        JOBS[job_id]["result_data"] = result
+        JOBS[job_id]["status"] = "finished"
+
+        with open(log_path, "a") as lf:
+            lf.write(f"[msa] n={result.get('n_sequences', 0)} aligned_L={result.get('aligned_length', 0)} conserved={len(result.get('conserved', []))}\n")
+
+        # optional: build artifact for /download (contains msa_conserved.json)
+        try:
+            art = build_artifact(job_id, lite=True)
+            JOBS[job_id]["artifact"] = str(art)
+            JOBS[job_id]["artifact_lite"] = str(art)
+        except Exception as e:
+            with open(log_path, "a") as lf:
+                lf.write(f"[msa] artifact build failed: {e}\n")
 
     return {"job_id": job_id, "status": "queued"}
 

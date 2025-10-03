@@ -120,6 +120,10 @@ export default function App() {
       alert('Please choose a FASTA or PDB file (or paste a FASTA sequence).');
       return;
     }
+    if (tool === 'msa' && !fileToSend && inputMode !== 'text') {
+      alert('Upload or paste a multi-FASTA for the MSA tool.');
+      return;
+    }
 
     // Build form data (unchanged for MPNN; AF fields still sent the same)
     const freezeSpec = freezeRef.current?.value?.trim() || '';
@@ -166,6 +170,7 @@ export default function App() {
             <option value="alphafold">AlphaFold</option>
             <option value="proteinmpnn">ProteinMPNN</option>
             <option value="residueid">Residue Identifier</option>
+            <option value="msa">Multiple Sequence Consensus</option>
           </select>
         </label>
       </section>
@@ -237,6 +242,30 @@ export default function App() {
             <div style={{ fontSize: 12, color: '#666' }}>
               Totals — length: {resultData.totals.length}, C: {resultData.totals.cysteines}, K: {resultData.totals.lysines}
             </div>
+          </div>
+        </section>
+      )}
+
+      {tool === 'msa' && status === 'finished' && resultData && (
+        <section style={{ marginTop: 12 }}>
+          <strong>Conserved positions</strong>
+          <div style={{ fontSize: 12, color: '#666' }}>
+            Sequences: {resultData.n_sequences ?? '-'} · Aligned length: {resultData.aligned_length ?? '-'}
+            {resultData.note && <div>Note: {resultData.note}</div>}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            {Array.isArray(resultData.conserved) && resultData.conserved.length ? (
+              <div>
+                <div style={{ marginBottom: 6 }}>
+                  Count: {resultData.conserved.length}
+                </div>
+                <pre style={{ background:'#f6f6f6', padding:12, borderRadius:8, whiteSpace:'pre-wrap' }}>
+                  {resultData.conserved.map(c => `${c.position}:${c.residue}`).join(', ')}
+                </pre>
+              </div>
+            ) : (
+              <div>No fully conserved columns found.</div>
+            )}
           </div>
         </section>
       )}
