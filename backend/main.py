@@ -489,8 +489,14 @@ def health():
 
 @app.post("/jobs")
 def submit_job(
-    tool: Literal["alphafold", "proteinmpnn", "residueid", "msa"] = Form(...),
+    tool: Literal["alphafold", "proteinmpnn", "residueid", "msa", "rfdiffusion"] = Form(...),
     file: UploadFile = File(...),
+
+    # --- RFdiffusion knobs ---
+    rf_mode: Literal["free","motif"] = Form("free"),
+    rf_len: int = Form(100),
+    rf_num_designs: int = Form(1),
+    rf_contigs: Optional[str] = Form(None),
 
     # AlphaFold knobs
     model_preset: Literal["monomer", "multimer"] = Form("monomer"),
@@ -629,6 +635,52 @@ def submit_job(
             cmd += f" --fixed_positions_jsonl {shlex.quote(str(fixed_jsonl_path))}"
         with open(log_path, "a") as lf:
             lf.write(f"MPNN CMD: {cmd}\n")
+        _launch(cmd, log_path, job_id)
+
+    elif tool == "rfdiffusion":
+        RF_ROOT = Path("/data/tools/rfdiffusion").resolve()
+        RF_MODELS = RF_ROOT / "models"
+
+        if not RF_MODELS.exists():
+            return JSONResponse({"detail": "Missing /data/tools/rfdiffusion/models with .pt weights"}, status_code=500)
+
+        out_dir = Path(JOBS[job_id]["output_dir"]).resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build hydra arguments (ENTRYPOINT of the image is already the runner)
+        if rf_mode == "motif":
+            # Motif mode requires a PDB input and a contig spec
+            if src_path.suffix.lower() != ".pdb":
+                return JSONResponse({"detail": "Upload a .pdb file for RFdiffusion motif mode"}, status_code=400)
+            if not rf_contigs or not rf_contigs.strip():
+                return JSONResponse({"detail": "Provide rf_contigs for motif mode (e.g. 5-15/A10-25/30-40)"}, status_code=400)
+            hydra_contigs = f"'contigmap.contigs=[{rf_contigs.strip()}]'"
+            input_in_container = f"/in/{src_path.name}"
+            input_flag = f"inference.input_pdb={input_in_container}"
+        else:
+            # Free design uses only a length
+            L = max(10, int(rf_len))
+            hydra_contigs = f"'contigmap.contigs=[{L}-{L}]'"
+            input_flag = ""
+
+        out_prefix = Path(f"rf_{job_id}")  # basename inside /out mount
+
+        cmd = (
+            "docker run --rm --gpus all --shm-size=16g "
+            f"-v {shlex.quote(str(RF_MODELS))}:/models "
+            f"-v {shlex.quote(str(in_dir))}:/in "
+            f"-v {shlex.quote(str(out_dir))}:/out "
+            "rosettacommons/rfdiffusion:latest "
+            f"{hydra_contigs} "
+            f"{input_flag} "
+            "inference.model_directory_path=/models "
+            f"inference.output_prefix=/out/{out_prefix.name} "
+            f"inference.num_designs={int(rf_num_designs)}"
+        )
+
+        with open(log_path, "a") as lf:
+            lf.write(f"RFdiffusion (docker) CMD: {cmd}\n")
+
         _launch(cmd, log_path, job_id)
 
     elif tool == "residueid":

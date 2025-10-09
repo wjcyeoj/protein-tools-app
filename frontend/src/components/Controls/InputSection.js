@@ -1,6 +1,7 @@
 // frontend/src/components/Controls/InputSection.js
 export default function InputSection({
   tool,
+  rfMode = 'free',
   file,
   setFile,
   inputMode,     // 'file' | 'text' (AF only)
@@ -13,6 +14,7 @@ export default function InputSection({
   const fileAccept =
     tool === 'alphafold' ? '.fa,.fasta' :
     tool === 'proteinmpnn' ? '.pdb,.cif' :
+    tool === 'rfdiffusion' ? (rfMode === 'motif' ? '.pdb' : '') :
     tool === 'residueid' ? '.fa,.fasta,.pdb' :
     '.fa,.fasta';
   const allowText = tool === 'alphafold' || tool === 'residueid' || tool === 'msa';
@@ -86,6 +88,10 @@ GHHHHHH...`}
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
             {tool === 'alphafold'
               ? 'Upload FASTA (.fa/.fasta)'
+              : tool === 'rfdiffusion'
+                ? (rfMode === 'motif'
+                    ? 'Upload PDB for motif mode'
+                    : 'No file required for free mode')
               : tool === 'proteinmpnn'
               ? 'Upload PDB/CIF (.pdb/.cif)'
               : 'Upload FASTA (.fa/.fasta) or PDB (.pdb)'}

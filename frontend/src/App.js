@@ -94,6 +94,13 @@ export default function App() {
   const [seqName, setSeqName] = useState('query'); // header if user pastes plain sequence
   const [seqText, setSeqText] = useState(''); // pasted FASTA or plain sequence
 
+  const [rfParams, setRfParams] = useState({
+    mode: 'free',   // 'free' or 'motif'
+    len: 100,       // for free mode
+    num: 1,         // number of designs
+    contigs: ''     // for motif mode
+  });
+
   // persist selections
   useEffect(() => localStorage.setItem(LS_TOOL, tool), [tool]);
   useEffect(() => localStorage.setItem(LS_AF, JSON.stringify(afParams)), [afParams]);
@@ -133,6 +140,13 @@ export default function App() {
       return;
     }
 
+    if (tool === 'rfdiffusion') {
+      if (rfParams.mode === 'motif' && !fileToSend) {
+        alert('Please upload a PDB file for motif mode.');
+        return;
+      }
+    }
+
     // Build form data (unchanged for MPNN; AF fields still sent the same)
     const freezeSpec = freezeRef.current?.value?.trim() || '';
     const body = new FormData();
@@ -142,6 +156,16 @@ export default function App() {
     }
 
     body.append('file', fileToSend);
+
+    if (tool === 'rfdiffusion') {
+      body.append('rf_mode', rfParams.mode);
+      body.append('rf_num_designs', String(rfParams.num || 1));
+      if (rfParams.mode === 'free') {
+        body.append('rf_len', String(rfParams.len || 100));
+      } else {
+        body.append('rf_contigs', rfParams.contigs || '');
+      }
+    }
 
     if (tool === 'alphafold') {
       body.append('model_preset', afParams.model_preset);
@@ -179,6 +203,7 @@ export default function App() {
             <option value="proteinmpnn">ProteinMPNN</option>
             <option value="residueid">Residue Identifier</option>
             <option value="msa">Multiple Sequence Consensus</option>
+            <option value="rfdiffusion">RFdiffusion</option>
           </select>
         </label>
       </section>
@@ -197,6 +222,7 @@ export default function App() {
       {/* File chooser OR paste box */}
       <InputSection
         tool={tool}
+        rfMode={rfParams.mode}
         file={file}
         setFile={setFile}
         inputMode={inputMode}
@@ -216,6 +242,73 @@ export default function App() {
           <ProteinMpnnParams params={mpnnParams} setParams={setMpnnParams} />
           <FreezeSpecInput inputRef={freezeRef} />
         </>
+      )}
+
+      {tool === 'rfdiffusion' && (
+        <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}>
+          <h3 style={{ marginTop: 0 }}>RFdiffusion parameters</h3>
+
+          <div style={{ marginBottom: 8 }}>
+            <label>
+              <strong>Mode:&nbsp;</strong>
+              <select
+                value={rfParams.mode}
+                onChange={(e) => setRfParams(p => ({ ...p, mode: e.target.value }))}
+              >
+                <option value="free">Free (length only)</option>
+                <option value="motif">Motif (upload PDB + contigs)</option>
+              </select>
+            </label>
+          </div>
+
+          {rfParams.mode === 'free' && (
+            <div style={{ marginBottom: 8 }}>
+              <label>
+                <strong>Length:&nbsp;</strong>
+                <input
+                  type="number"
+                  min={10}
+                  max={1000}
+                  value={rfParams.len}
+                  onChange={(e) => setRfParams(p => ({ ...p, len: Number(e.target.value || 100) }))}
+                  style={{ width: 120 }}
+                />
+              </label>
+            </div>
+          )}
+
+          {rfParams.mode === 'motif' && (
+            <div style={{ marginBottom: 8 }}>
+              <label>
+                <strong>Contigs:&nbsp;</strong>
+                <input
+                  type="text"
+                  placeholder="e.g. 5-15/A10-25/30-40"
+                  value={rfParams.contigs}
+                  onChange={(e) => setRfParams(p => ({ ...p, contigs: e.target.value }))}
+                  style={{ width: '100%' }}
+                />
+              </label>
+              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                Provide a contig spec that references residues in your uploaded PDB.
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label>
+              <strong># designs:&nbsp;</strong>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={rfParams.num}
+                onChange={(e) => setRfParams(p => ({ ...p, num: Number(e.target.value || 1) }))}
+                style={{ width: 120 }}
+              />
+            </label>
+          </div>
+        </section>
       )}
 
       <form onSubmit={handleSubmit} style={{ margin: '1rem 0' }}>
