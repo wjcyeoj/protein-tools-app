@@ -490,13 +490,34 @@ def health():
 @app.post("/jobs")
 def submit_job(
     tool: Literal["alphafold", "proteinmpnn", "residueid", "msa", "rfdiffusion"] = Form(...),
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
 
     # --- RFdiffusion knobs ---
     rf_mode: Literal["free","motif"] = Form("free"),
     rf_len: int = Form(100),
     rf_num_designs: int = Form(1),
     rf_contigs: Optional[str] = Form(None),
+
+    # sampling / reproducibility
+    rf_num_steps: Optional[int] = Form(None),
+    rf_temperature: Optional[float] = Form(None),
+    rf_guidance_scale: Optional[float] = Form(None),
+    rf_recycle: Optional[int] = Form(None),
+    rf_seed: Optional[int] = Form(None),
+    rf_deterministic: bool = Form(False),
+
+    # symmetry (optional)
+    rf_symmetry_type: Optional[Literal["cyclic","dihedral","tetrahedral","octahedral","icosahedral"]] = Form(None),
+    rf_symmetry_order: Optional[int] = Form(None),
+
+    # quality filter (optional)
+    rf_min_plddt: Optional[float] = Form(None),
+
+    # checkpoint override (optional)
+    rf_checkpoint: Optional[str] = Form(None),
+
+    # raw expert Hydra overrides (one per line, optional)
+    rf_extra_overrides: Optional[str] = Form(None),
 
     # AlphaFold knobs
     model_preset: Literal["monomer", "multimer"] = Form("monomer"),
@@ -523,14 +544,16 @@ def submit_job(
     in_dir.mkdir(parents=True, exist_ok=True)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    fname = _safe_name(file.filename or f"input_{tool}")
-    src_path = in_dir / fname
-    _write_upload(src_path, file)
+    src_path = None
+    if file is not None:
+        fname = _safe_name(file.filename or f"input_{tool}")
+        src_path = in_dir / fname
+        _write_upload(src_path, file)
 
     JOBS[job_id] = {
         "id": job_id,
         "tool": tool,
-        "input_path": str(src_path),
+        **({"input_path": str(src_path)} if src_path else {}),
         "output_dir": str(out_dir),
         "log_path": str(log_path),
         "status": "queued",
@@ -538,6 +561,8 @@ def submit_job(
     }
 
     if tool == "alphafold":
+        if src_path is None:
+            return JSONResponse({"detail": "AlphaFold expects a FASTA file."}, status_code=400)
         af = _detect_af_databases()
 
         db_ok = all([
@@ -592,6 +617,8 @@ def submit_job(
         _launch(docker, log_path, job_id)
 
     elif tool == "proteinmpnn":
+        if src_path is None:
+            return JSONResponse({"detail": "ProteinMPNN expects a .pdb or .cif file."}, status_code=400)
         py = sys.executable
 
         if not MPNN_SCRIPT.exists():
@@ -649,6 +676,8 @@ def submit_job(
 
         # Build hydra arguments (ENTRYPOINT of the image is already the runner)
         if rf_mode == "motif":
+            if src_path is None or src_path.suffix.lower() != ".pdb":
+                return JSONResponse({"detail": "Upload a .pdb file for RFdiffusion motif mode"}, status_code=400)
             # Motif mode requires a PDB input and a contig spec
             if src_path.suffix.lower() != ".pdb":
                 return JSONResponse({"detail": "Upload a .pdb file for RFdiffusion motif mode"}, status_code=400)
@@ -678,12 +707,58 @@ def submit_job(
             f"inference.num_designs={int(rf_num_designs)}"
         )
 
+        # collect optional hydra overrides safely (append only if set)
+        extra = []
+
+        # sampling / reproducibility
+        if rf_num_steps is not None:
+            extra.append(f"inference.num_steps={int(rf_num_steps)}")
+        if rf_temperature is not None:
+            extra.append(f"inference.temperature={float(rf_temperature)}")
+        if rf_guidance_scale is not None:
+            extra.append(f"inference.guidance_scale={float(rf_guidance_scale)}")
+        if rf_recycle is not None:
+            extra.append(f"inference.recycle={int(rf_recycle)}")
+        if rf_seed is not None:
+            extra.append(f"inference.seed={int(rf_seed)}")
+        if rf_deterministic:
+            extra.append("inference.deterministic=true")
+
+        # symmetry
+        if rf_symmetry_type:
+            extra.append(f"symmetry.type={rf_symmetry_type}")
+        if rf_symmetry_order is not None:
+            extra.append(f"symmetry.order={int(rf_symmetry_order)}")
+
+        # filter
+        if rf_min_plddt is not None:
+            extra.append(f"inference.min_plddt={float(rf_min_plddt)}")
+
+        # checkpoint override
+        if rf_checkpoint:
+            # common key names in images: inference.ckpt or inference.model_path
+            # prefer ckpt; users can override via rf_extra_overrides if different
+            extra.append(f"inference.ckpt={shlex.quote(rf_checkpoint)}")
+
+        # raw expert overrides (textarea; one per line)
+        if rf_extra_overrides:
+            for line in rf_extra_overrides.splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    # don't quote here; allow full hydra syntax
+                    extra.append(line)
+
+        if extra:
+            cmd += " " + " ".join(extra)
+
         with open(log_path, "a") as lf:
             lf.write(f"RFdiffusion (docker) CMD: {cmd}\n")
 
         _launch(cmd, log_path, job_id)
 
     elif tool == "residueid":
+        if src_path is None:
+            return JSONResponse({"detail": "Residue Identifier expects FASTA or PDB."}, status_code=400)
         ext = src_path.suffix.lower()
         with open(log_path, "a") as lf:
             lf.write(f"[residueid] parsing {src_path.name} (ext={ext})\n")
@@ -712,6 +787,8 @@ def submit_job(
                      f"C={results['totals']['cysteines']} K={results['totals']['lysines']}\n")
 
     elif tool == "msa":
+        if src_path is None:
+            return JSONResponse({"detail": "MSA expects a multi-FASTA."}, status_code=400)
         # Save upload (already done above: src_path points to the uploaded file)
         ext = src_path.suffix.lower()
         if ext not in [".fa", ".fasta"]:

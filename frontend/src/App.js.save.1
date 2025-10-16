@@ -115,12 +115,12 @@ export default function App() {
     // quality
     min_plddt: '',
 
-    // checkpoint
-    checkpoint: '',
+  // checkpoint
+  checkpoint: '',
 
-    // expert hydra (multiline, one per line)
-    extra_overrides: '',
-  });
+  // expert hydra (multiline, one per line)
+  extra_overrides: '',
+});
 
   // persist selections
   useEffect(() => localStorage.setItem(LS_TOOL, tool), [tool]);
@@ -176,9 +176,7 @@ export default function App() {
       body.append('job_id', jobName.trim()); // backend validates / dedupes
     }
 
-    if (fileToSend instanceof File || fileToSend instanceof Blob) {
-      body.append('file', fileToSend);
-    }
+    body.append('file', fileToSend);
 
     if (tool === 'rfdiffusion') {
       body.append('rf_mode', rfParams.mode);
@@ -187,29 +185,6 @@ export default function App() {
         body.append('rf_len', String(rfParams.len || 100));
       } else {
         body.append('rf_contigs', rfParams.contigs || '');
-      }
-
-      // sampling / reproducibility (only send if user provided)
-      if (rfParams.num_steps) body.append('rf_num_steps', String(rfParams.num_steps));
-      if (rfParams.temperature) body.append('rf_temperature', String(rfParams.temperature));
-      if (rfParams.guidance_scale) body.append('rf_guidance_scale', String(rfParams.guidance_scale));
-      if (rfParams.recycle !== '' && rfParams.recycle != null) body.append('rf_recycle', String(rfParams.recycle));
-      if (rfParams.seed) body.append('rf_seed', String(rfParams.seed));
-      body.append('rf_deterministic', String(!!rfParams.deterministic));
-
-      // symmetry
-      if (rfParams.symmetry_type) body.append('rf_symmetry_type', rfParams.symmetry_type);
-      if (rfParams.symmetry_order) body.append('rf_symmetry_order', String(rfParams.symmetry_order));
-
-      // quality
-      if (rfParams.min_plddt) body.append('rf_min_plddt', String(rfParams.min_plddt));
-
-      // checkpoint
-      if (rfParams.checkpoint) body.append('rf_checkpoint', rfParams.checkpoint);
-
-      // expert overrides
-      if (rfParams.extra_overrides && rfParams.extra_overrides.trim()) {
-        body.append('rf_extra_overrides', rfParams.extra_overrides);
       }
     }
 
@@ -353,130 +328,6 @@ export default function App() {
                 style={{ width: 120 }}
               />
             </label>
-          </div>
-
-          <hr style={{ margin: '12px 0', border: 0, borderTop: '1px solid #eee' }} />
-
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12 }}>
-            {/* Sampling */}
-            <div>
-              <label><strong>Diffusion steps:&nbsp;</strong>
-                <input
-                  type="number" min={1} value={rfParams.num_steps}
-                  onChange={(e)=>setRfParams(p=>({...p, num_steps: e.target.value}))}
-                  style={{ width: 140 }}
-                  placeholder="e.g., 50"
-                />
-              </label>
-            </div>
-            <div>
-              <label><strong>Temperature:&nbsp;</strong>
-                <input
-                  type="number" step="0.01" value={rfParams.temperature}
-                  onChange={(e)=>setRfParams(p=>({...p, temperature: e.target.value}))}
-                  style={{ width: 140 }} placeholder="e.g., 1.0"
-                />
-              </label>
-            </div>
-            <div>
-              <label><strong>Guidance scale:&nbsp;</strong>
-                <input
-                  type="number" step="0.01" value={rfParams.guidance_scale}
-                  onChange={(e)=>setRfParams(p=>({...p, guidance_scale: e.target.value}))}
-                  style={{ width: 140 }} placeholder="e.g., 2.0"
-                />
-              </label>
-            </div>
-            <div>
-              <label><strong>Recycles:&nbsp;</strong>
-                <input
-                  type="number" min={0} value={rfParams.recycle}
-                  onChange={(e)=>setRfParams(p=>({...p, recycle: e.target.value}))}
-                  style={{ width: 140 }} placeholder="e.g., 0"
-                />
-              </label>
-            </div>
-            <div>
-              <label><strong>Seed:&nbsp;</strong>
-                <input
-                  type="number" value={rfParams.seed}
-                  onChange={(e)=>setRfParams(p=>({...p, seed: e.target.value}))}
-                  style={{ width: 140 }} placeholder="random"
-                />
-              </label>
-              <div style={{ marginTop: 6 }}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={!!rfParams.deterministic}
-                    onChange={(e)=>setRfParams(p=>({...p, deterministic: e.target.checked}))}
-                  /> Deterministic
-                </label>
-              </div>
-            </div>
-
-            {/* Symmetry */}
-            <div>
-              <label><strong>Symmetry type:&nbsp;</strong>
-                <select
-                  value={rfParams.symmetry_type}
-                  onChange={(e)=>setRfParams(p=>({...p, symmetry_type: e.target.value}))}
-                >
-                  <option value="">(none)</option>
-                  <option value="cyclic">cyclic</option>
-                  <option value="dihedral">dihedral</option>
-                  <option value="tetrahedral">tetrahedral</option>
-                  <option value="octahedral">octahedral</option>
-                  <option value="icosahedral">icosahedral</option>
-                </select>
-              </label>
-            </div>
-            <div>
-              <label><strong>Symmetry order:&nbsp;</strong>
-                <input
-                  type="number" min={2} value={rfParams.symmetry_order}
-                  onChange={(e)=>setRfParams(p=>({...p, symmetry_order: e.target.value}))}
-                  style={{ width: 140 }} placeholder="e.g., 2"
-                />
-              </label>
-            </div>
-
-            {/* Quality filter */}
-            <div>
-              <label><strong>Min pLDDT:&nbsp;</strong>
-                <input
-                  type="number" step="0.1" value={rfParams.min_plddt}
-                  onChange={(e)=>setRfParams(p=>({...p, min_plddt: e.target.value}))}
-                  style={{ width: 140 }} placeholder="e.g., 70"
-                />
-              </label>
-            </div>
-
-            {/* Checkpoint */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label><strong>Checkpoint path (optional):&nbsp;</strong>
-                <input
-                  type="text"
-                  value={rfParams.checkpoint}
-                  onChange={(e)=>setRfParams(p=>({...p, checkpoint: e.target.value}))}
-                  style={{ width: '100%' }} placeholder="/models/some_checkpoint.pt"
-                />
-              </label>
-            </div>
-            {/* Expert overrides */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label><strong>Expert Hydra overrides (one per line)</strong></label>
-              <textarea
-                value={rfParams.extra_overrides}
-                onChange={(e)=>setRfParams(p=>({...p, extra_overrides: e.target.value}))}
-                rows={4}
-                placeholder={`e.g.\npotentials.clash.weight=1.0\nppi.hotspot_res='A45,A67'`}
-                style={{ width: '100%', fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-              />
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                These are appended as raw Hydra overrides. Use with care.
-              </div>
-            </div>
           </div>
         </section>
       )}
