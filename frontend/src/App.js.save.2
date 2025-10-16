@@ -315,271 +315,270 @@ export default function App() {
 
       {tool === 'rfdiffusion' && (
         <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}>
-          <h3 style={{ marginTop: 0 }}>RFdiffusion parameters</h3>
+  <h3 style={{ marginTop: 0 }}>RFdiffusion parameters</h3>
 
-          <div style={{ marginBottom: 8 }}>
-            <label>
-              <strong>Mode:&nbsp;</strong>
-              <select
-                value={rfParams.mode}
-                onChange={(e) => setRfParams(p => ({ ...p, mode: e.target.value }))}
-              >
-                <option value="free">Free (length only)</option>
-                <option value="motif">Motif (upload PDB + contigs)</option>
-              </select>
-              <Info>
-                Free: generate a backbone of the requested length. Motif: keep given PDB segment(s) fixed (via contigs) and design around them.
-              </Info>
-            </label>
-          </div>
+  <div style={{ marginBottom: 8 }}>
+    <label>
+      <strong>Mode:&nbsp;</strong>
+      <select
+        value={rfParams.mode}
+        onChange={(e) => setRfParams(p => ({ ...p, mode: e.target.value }))}
+      >
+        <option value="free">Free (length only)</option>
+        <option value="motif">Motif (upload PDB + contigs)</option>
+      </select>
+      <Info>
+        Free: generate a backbone of the requested length. Motif: keep given PDB segment(s) fixed (via contigs) and design around them.
+      </Info>
+    </label>
+  </div>
 
-          {rfParams.mode === 'free' && (
-            <div style={{ marginBottom: 8 }}>
-              <label>
-                <strong>Length:&nbsp;</strong>
-                <input
-                  type="number"
-                  min={RF_RANGES.len.min}
-                  max={RF_RANGES.len.max}
-                  step={RF_RANGES.len.step}
-                  list="rf_len_suggest"
-                  value={rfParams.len}
-                  onChange={(e) => setRfParams(p => ({ ...p, len: clamp(e.target.value, RF_RANGES.len) }))}
-                  style={{ width: 160 }}
-                />
-              </label>
-              <datalist id="rf_len_suggest">
-                {RF_RANGES.len.suggest.map(v => <option key={v} value={v} />)}
-              </datalist>
-              <Info>Target chain length (aa). 60–300 is a good starting range.</Info>
-            </div>
-          )}
+  {rfParams.mode === 'free' && (
+    <div style={{ marginBottom: 8 }}>
+      <label>
+        <strong>Length:&nbsp;</strong>
+        <input
+          type="number"
+          min={RF_RANGES.len.min}
+          max={RF_RANGES.len.max}
+          step={RF_RANGES.len.step}
+          list="rf_len_suggest"
+          value={rfParams.len}
+          onChange={(e) => setRfParams(p => ({ ...p, len: clamp(e.target.value, RF_RANGES.len) }))}
+          style={{ width: 160 }}
+        />
+      </label>
+      <datalist id="rf_len_suggest">
+        {RF_RANGES.len.suggest.map(v => <option key={v} value={v} />)}
+      </datalist>
+      <Info>Target chain length (aa). 60–300 is a good starting range.</Info>
+    </div>
+  )}
 
-          {rfParams.mode === 'motif' && (
-            <div style={{ marginBottom: 8 }}>
-              <label>
-                <strong>Contigs:&nbsp;</strong>
-                <input
-                  type="text"
-                  placeholder="e.g. 5-15/A10-25/30-40"
-                  value={rfParams.contigs}
-                  onChange={(e) => setRfParams(p => ({ ...p, contigs: e.target.value }))}
-                  style={{ width: '100%' }}
-                />
-              </label>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                Use numbers for designed segments and chain+residue ranges from your PDB for fixed segments. “/0” inserts a chain break.
-              </div>
-            </div>
-          )}
+  {rfParams.mode === 'motif' && (
+    <div style={{ marginBottom: 8 }}>
+      <label>
+        <strong>Contigs:&nbsp;</strong>
+        <input
+          type="text"
+          placeholder="e.g. 5-15/A10-25/30-40"
+          value={rfParams.contigs}
+          onChange={(e) => setRfParams(p => ({ ...p, contigs: e.target.value }))}
+          style={{ width: '100%' }}
+        />
+      </label>
+      <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+        Use numbers for designed segments and chain+residue ranges from your PDB for fixed segments. “/0” inserts a chain break.
+      </div>
+    </div>
+  )}
 
-            <div>
-              <label>
-                <strong># designs:&nbsp;</strong>
-                <input
-                  type="number"
-                  min={RF_RANGES.num.min}
-                  max={RF_RANGES.num.max}
-                  step={RF_RANGES.num.step}
-                  list="rf_num_suggest"
-                  value={rfParams.num}
-                  onChange={(e) => setRfParams(p => ({ ...p, num: clamp(e.target.value, RF_RANGES.num) }))}
-                  style={{ width: 140 }}
-                />
-              </label>
-              <datalist id="rf_num_suggest">
-                {RF_RANGES.num.suggest.map(v => <option key={v} value={v} />)}
-              </datalist>
-            </div>
+  <div>
+    <label>
+      <strong># designs:&nbsp;</strong>
+      <input
+        type="number"
+        min={RF_RANGES.num.min}
+        max={RF_RANGES.num.max}
+        step={RF_RANGES.num.step}
+        list="rf_num_suggest"
+        value={rfParams.num}
+        onChange={(e) => setRfParams(p => ({ ...p, num: clamp(e.target.value, RF_RANGES.num) }))}
+        style={{ width: 140 }}
+      />
+    </label>
+    <datalist id="rf_num_suggest">
+      {RF_RANGES.num.suggest.map(v => <option key={v} value={v} />)}
+    </datalist>
+  </div>
 
-            <hr style={{ margin: '12px 0', border: 0, borderTop: '1px solid #eee' }} />
+  <hr style={{ margin: '12px 0', border: 0, borderTop: '1px solid #eee' }} />
 
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
-              {/* Sampling */}
-              <div>
-                <label><strong>Diffusion steps:&nbsp;</strong>
-                  <input
-                    type="number"
-                    min={RF_RANGES.num_steps.min}
-                    max={RF_RANGES.num_steps.max}
-                    step={RF_RANGES.num_steps.step}
-                    list="rf_steps_suggest"
-                    value={rfParams.num_steps}
-                    onChange={(e)=>setRfParams(p=>({...p, num_steps: clamp(e.target.value, RF_RANGES.num_steps)}))}
-                    style={{ width: 160 }}
-                    placeholder="e.g., 50"
-                  />
-                </label>
-                <datalist id="rf_steps_suggest">
-                  {RF_RANGES.num_steps.suggest.map(v => <option key={v} value={v} />)}
-                </datalist>
-                <Info>More steps → more thorough, slower. Try 50–80 for tough tasks.</Info>
-              </div>
+  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
+    {/* Sampling */}
+    <div>
+      <label><strong>Diffusion steps:&nbsp;</strong>
+        <input
+          type="number"
+          min={RF_RANGES.num_steps.min}
+          max={RF_RANGES.num_steps.max}
+          step={RF_RANGES.num_steps.step}
+          list="rf_steps_suggest"
+          value={rfParams.num_steps}
+          onChange={(e)=>setRfParams(p=>({...p, num_steps: clamp(e.target.value, RF_RANGES.num_steps)}))}
+          style={{ width: 160 }}
+          placeholder="e.g., 50"
+        />
+      </label>
+      <datalist id="rf_steps_suggest">
+        {RF_RANGES.num_steps.suggest.map(v => <option key={v} value={v} />)}
+      </datalist>
+      <Info>More steps → more thorough, slower. Try 50–80 for tough tasks.</Info>
+    </div>
 
-              <div>
-                <label><strong>Temperature:&nbsp;</strong>
-                  <input
-                    type="number"
-                    min={RF_RANGES.temperature.min}
-                    max={RF_RANGES.temperature.max}
-                    step={RF_RANGES.temperature.step}
-                    list="rf_temp_suggest"
-                    value={rfParams.temperature}
-                    onChange={(e)=>setRfParams(p=>({...p, temperature: clamp(e.target.value, RF_RANGES.temperature)}))}
-                    style={{ width: 160 }} placeholder="1.0"
-                  />
-                </label>
-                <datalist id="rf_temp_suggest">
-                  {RF_RANGES.temperature.suggest.map(v => <option key={v} value={v} />)}
-                </datalist>
-                <Info>Higher = more diversity; lower = more conservative. Start at 1.0.</Info>
-              </div>
+    <div>
+      <label><strong>Temperature:&nbsp;</strong>
+        <input
+          type="number"
+          min={RF_RANGES.temperature.min}
+          max={RF_RANGES.temperature.max}
+          step={RF_RANGES.temperature.step}
+          list="rf_temp_suggest"
+          value={rfParams.temperature}
+          onChange={(e)=>setRfParams(p=>({...p, temperature: clamp(e.target.value, RF_RANGES.temperature)}))}
+          style={{ width: 160 }} placeholder="1.0"
+        />
+      </label>
+      <datalist id="rf_temp_suggest">
+        {RF_RANGES.temperature.suggest.map(v => <option key={v} value={v} />)}
+      </datalist>
+      <Info>Higher = more diversity; lower = more conservative. Start at 1.0.</Info>
+    </div>
 
-              <div>
-                <label><strong>Guidance scale:&nbsp;</strong>
-                  <input
-                    type="number"
-                    min={RF_RANGES.guidance_scale.min}
-                    max={RF_RANGES.guidance_scale.max}
-                    step={RF_RANGES.guidance_scale.step}
-                    list="rf_guidance_suggest"
-                    value={rfParams.guidance_scale}
-                    onChange={(e)=>setRfParams(p=>({...p, guidance_scale: clamp(e.target.value, RF_RANGES.guidance_scale)}))}
-                    style={{ width: 160 }} placeholder="2.0"
-                  />
-                </label>
-                <datalist id="rf_guidance_suggest">
-                  {RF_RANGES.guidance_scale.suggest.map(v => <option key={v} value={v} />)}
-                </datalist>
-                <Info>Strength of constraints (motif/potentials). Try 1.5–3.0.</Info>
-              </div>
+    <div>
+      <label><strong>Guidance scale:&nbsp;</strong>
+        <input
+          type="number"
+          min={RF_RANGES.guidance_scale.min}
+          max={RF_RANGES.guidance_scale.max}
+          step={RF_RANGES.guidance_scale.step}
+          list="rf_guidance_suggest"
+          value={rfParams.guidance_scale}
+          onChange={(e)=>setRfParams(p=>({...p, guidance_scale: clamp(e.target.value, RF_RANGES.guidance_scale)}))}
+          style={{ width: 160 }} placeholder="2.0"
+        />
+      </label>
+      <datalist id="rf_guidance_suggest">
+        {RF_RANGES.guidance_scale.suggest.map(v => <option key={v} value={v} />)}
+      </datalist>
+      <Info>Strength of constraints (motif/potentials). Try 1.5–3.0.</Info>
+    </div>
 
-              <div>
-                <label><strong>Recycles:&nbsp;</strong>
-                  <select
-                    value={rfParams.recycle === '' ? '' : String(rfParams.recycle)}
-                    onChange={(e)=>setRfParams(p=>({...p, recycle: e.target.value === '' ? '' : clamp(e.target.value, RF_RANGES.recycle)}))}
-                    style={{ width: 120 }}
-                  >
-                    <option value="">(auto)</option>
-                    {RF_RANGES.recycle.suggest.map(v => <option key={v} value={v}>{v}</option>)}
-                    {/* you can extend to 4,5 if needed */}
-                  </select>
-                </label>
-                <Info>Extra refinement passes. 0–1 is a good start.</Info>
-              </div>
+    <div>
+      <label><strong>Recycles:&nbsp;</strong>
+        <select
+          value={rfParams.recycle === '' ? '' : String(rfParams.recycle)}
+          onChange={(e)=>setRfParams(p=>({...p, recycle: e.target.value === '' ? '' : clamp(e.target.value, RF_RANGES.recycle)}))}
+          style={{ width: 120 }}
+        >
+          <option value="">(auto)</option>
+          {RF_RANGES.recycle.suggest.map(v => <option key={v} value={v}>{v}</option>)}
+          {/* you can extend to 4,5 if needed */}
+        </select>
+      </label>
+      <Info>Extra refinement passes. 0–1 is a good start.</Info>
+    </div>
 
-              <div>
-                <label><strong>Seed:&nbsp;</strong>
-                  <input
-                    type="number"
-                    min={RF_RANGES.seed.min}
-                    max={RF_RANGES.seed.max}
-                    step={RF_RANGES.seed.step}
-                    value={rfParams.seed}
-                    onChange={(e)=>setRfParams(p=>({...p, seed: clamp(e.target.value, RF_RANGES.seed)}))}
-                    style={{ width: 180 }} placeholder="random"
-                 />
-               </label>
-               <div style={{ marginTop: 6 }}>
-                 <label>
-                   <input
-                     type="checkbox"
-                     checked={!!rfParams.deterministic}
-                     onChange={(e)=>setRfParams(p=>({...p, deterministic: e.target.checked}))}
-                   /> Deterministic
-                 </label>
-                 <Info>Set a seed + deterministic for reproducibility.</Info>
-               </div>
-             </div>
+    <div>
+      <label><strong>Seed:&nbsp;</strong>
+        <input
+          type="number"
+          min={RF_RANGES.seed.min}
+          max={RF_RANGES.seed.max}
+          step={RF_RANGES.seed.step}
+          value={rfParams.seed}
+          onChange={(e)=>setRfParams(p=>({...p, seed: clamp(e.target.value, RF_RANGES.seed)}))}
+          style={{ width: 180 }} placeholder="random"
+        />
+      </label>
+      <div style={{ marginTop: 6 }}>
+        <label>
+          <input
+            type="checkbox"
+            checked={!!rfParams.deterministic}
+            onChange={(e)=>setRfParams(p=>({...p, deterministic: e.target.checked}))}
+          /> Deterministic
+        </label>
+        <Info>Set a seed + deterministic for reproducibility.</Info>
+      </div>
+    </div>
 
-             {/* Symmetry */}
-             <div>
-               <label><strong>Symmetry type:&nbsp;</strong>
-                 <select
-                   value={rfParams.symmetry_type}
-                   onChange={(e)=>setRfParams(p=>({...p, symmetry_type: e.target.value }))}
-                 >
-                   <option value="">(none)</option>
-                   <option value="cyclic">cyclic</option>
-                   <option value="dihedral">dihedral</option>
-                   <option value="tetrahedral">tetrahedral</option>
-                   <option value="octahedral">octahedral</option>
-                   <option value="icosahedral">icosahedral</option>
-                 </select>
-                </label>
-                <Info>Choose group symmetry if designing oligomers.</Info>
-              </div>
+    {/* Symmetry */}
+    <div>
+      <label><strong>Symmetry type:&nbsp;</strong>
+        <select
+          value={rfParams.symmetry_type}
+          onChange={(e)=>setRfParams(p=>({...p, symmetry_type: e.target.value }))}
+        >
+          <option value="">(none)</option>
+          <option value="cyclic">cyclic</option>
+          <option value="dihedral">dihedral</option>
+          <option value="tetrahedral">tetrahedral</option>
+          <option value="octahedral">octahedral</option>
+          <option value="icosahedral">icosahedral</option>
+        </select>
+      </label>
+      <Info>Choose group symmetry if designing oligomers.</Info>
+    </div>
 
-              <div>
-                <label><strong>Symmetry order:&nbsp;</strong>
-                  <input
-                    type="number"
-                    min={RF_RANGES.symmetry_order.min}
-                    max={RF_RANGES.symmetry_order.max}
-                    step={RF_RANGES.symmetry_order.step}
-                    list="rf_symorder_suggest"
-                    value={rfParams.symmetry_order}
-                    onChange={(e)=>setRfParams(p=>({...p, symmetry_order: clamp(e.target.value, RF_RANGES.symmetry_order)}))}
-                    style={{ width: 140 }} placeholder="e.g., 2"
-                 />
-               </label>
-               <datalist id="rf_symorder_suggest">
-                 {RF_RANGES.symmetry_order.suggest.map(v => <option key={v} value={v} />)}
-               </datalist>
-               <Info>For cyclic: 2=C2 dimer, 3=C3 trimer, etc. Keep 2–6 to start.</Info>
-             </div>
+    <div>
+      <label><strong>Symmetry order:&nbsp;</strong>
+        <input
+          type="number"
+          min={RF_RANGES.symmetry_order.min}
+          max={RF_RANGES.symmetry_order.max}
+          step={RF_RANGES.symmetry_order.step}
+          list="rf_symorder_suggest"
+          value={rfParams.symmetry_order}
+          onChange={(e)=>setRfParams(p=>({...p, symmetry_order: clamp(e.target.value, RF_RANGES.symmetry_order)}))}
+          style={{ width: 140 }} placeholder="e.g., 2"
+        />
+      </label>
+      <datalist id="rf_symorder_suggest">
+        {RF_RANGES.symmetry_order.suggest.map(v => <option key={v} value={v} />)}
+      </datalist>
+      <Info>For cyclic: 2=C2 dimer, 3=C3 trimer, etc. Keep 2–6 to start.</Info>
+    </div>
 
-             {/* Quality filter */}
-             <div>
-               <label><strong>Min pLDDT:&nbsp;</strong>
-                 <input
-                   type="number"
-                   min={RF_RANGES.min_plddt.min}
-                   max={RF_RANGES.min_plddt.max}
-                   step={RF_RANGES.min_plddt.step}
-                   list="rf_plddt_suggest"
-                   value={rfParams.min_plddt}
-                   onChange={(e)=>setRfParams(p=>({...p, min_plddt: clamp(e.target.value, RF_RANGES.min_plddt)}))}
-                   style={{ width: 140 }} placeholder="70"
-                />
-              </label>
-              <datalist id="rf_plddt_suggest">
-                {RF_RANGES.min_plddt.suggest.map(v => <option key={v} value={v} />)}
-              </datalist>
-              <Info>Filter out designs predicted below this confidence.</Info>
-            </div>
+    {/* Quality filter */}
+    <div>
+      <label><strong>Min pLDDT:&nbsp;</strong>
+        <input
+          type="number"
+          min={RF_RANGES.min_plddt.min}
+          max={RF_RANGES.min_plddt.max}
+          step={RF_RANGES.min_plddt.step}
+          list="rf_plddt_suggest"
+          value={rfParams.min_plddt}
+          onChange={(e)=>setRfParams(p=>({...p, min_plddt: clamp(e.target.value, RF_RANGES.min_plddt)}))}
+          style={{ width: 140 }} placeholder="70"
+        />
+      </label>
+      <datalist id="rf_plddt_suggest">
+        {RF_RANGES.min_plddt.suggest.map(v => <option key={v} value={v} />)}
+      </datalist>
+      <Info>Filter out designs predicted below this confidence.</Info>
+    </div>
 
-            {/* Checkpoint */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label><strong>Checkpoint path (optional):&nbsp;</strong>
-                <input
-                  type="text"
-                  value={rfParams.checkpoint}
-                  onChange={(e)=>setRfParams(p=>({...p, checkpoint: e.target.value}))}
-                  style={{ width: '100%' }} placeholder="/models/some_checkpoint.pt"
-                />
-              </label>
-              <Info>Override default weights only if you have a specific checkpoint.</Info>
-            </div>
+    {/* Checkpoint */}
+    <div style={{ gridColumn: '1 / -1' }}>
+      <label><strong>Checkpoint path (optional):&nbsp;</strong>
+        <input
+          type="text"
+          value={rfParams.checkpoint}
+          onChange={(e)=>setRfParams(p=>({...p, checkpoint: e.target.value}))}
+          style={{ width: '100%' }} placeholder="/models/some_checkpoint.pt"
+        />
+      </label>
+      <Info>Override default weights only if you have a specific checkpoint.</Info>
+    </div>
 
-            {/* Expert overrides */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label><strong>Expert Hydra overrides (one per line)</strong></label>
-              <textarea
-                value={rfParams.extra_overrides}
-                onChange={(e)=>setRfParams(p=>({...p, extra_overrides: e.target.value}))}
-                rows={4}
-                placeholder={`e.g.\npotentials.clash.weight=1.0\nppi.hotspot_res='A45,A67'`}
-                style={{ width: '100%', fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-              />
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                These are appended as raw Hydra overrides. Use with care.
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+    {/* Expert overrides */}
+    <div style={{ gridColumn: '1 / -1' }}>
+      <label><strong>Expert Hydra overrides (one per line)</strong></label>
+      <textarea
+        value={rfParams.extra_overrides}
+        onChange={(e)=>setRfParams(p=>({...p, extra_overrides: e.target.value}))}
+        rows={4}
+        placeholder={`e.g.\npotentials.clash.weight=1.0\nppi.hotspot_res='A45,A67'`}
+        style={{ width: '100%', fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+      />
+      <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+        These are appended as raw Hydra overrides. Use with care.
+      </div>
+    </div>
+  </div>
+</section>
 
       <form onSubmit={handleSubmit} style={{ margin: '1rem 0' }}>
         <button type="submit">Submit</button>
