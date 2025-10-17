@@ -712,27 +712,9 @@ def submit_job(
 
         # sampling / reproducibility
         if rf_num_steps is not None:
-            extra.append(f"inference.num_steps={int(rf_num_steps)}")
-        if rf_temperature is not None:
-            extra.append(f"inference.temperature={float(rf_temperature)}")
-        if rf_guidance_scale is not None:
-            extra.append(f"inference.guidance_scale={float(rf_guidance_scale)}")
-        if rf_recycle is not None:
-            extra.append(f"inference.recycle={int(rf_recycle)}")
-        if rf_seed is not None:
-            extra.append(f"inference.seed={int(rf_seed)}")
+            extra.append(f"diffuser.T={int(rf_num_steps)}")
         if rf_deterministic:
             extra.append("inference.deterministic=true")
-
-        # symmetry
-        if rf_symmetry_type:
-            extra.append(f"symmetry.type={rf_symmetry_type}")
-        if rf_symmetry_order is not None:
-            extra.append(f"symmetry.order={int(rf_symmetry_order)}")
-
-        # filter
-        if rf_min_plddt is not None:
-            extra.append(f"inference.min_plddt={float(rf_min_plddt)}")
 
         # checkpoint override
         if rf_checkpoint:
