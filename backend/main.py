@@ -694,18 +694,43 @@ def submit_job(
 
         out_prefix = Path(f"rf_{job_id}")  # basename inside /out mount
 
-        cmd = (
+        # ---- Symmetry mapping ----
+        symmetry_config = ""
+        symmetry_override = ""
+        if rf_symmetry_type:
+            # Use the dedicated symmetry config
+            symmetry_config = "--config-name symmetry"
+
+            st = rf_symmetry_type.lower()
+            if st in ("cyclic", "dihedral"):
+                if not rf_symmetry_order or int(rf_symmetry_order) < 2:
+                    return JSONResponse({"detail": "For cyclic/dihedral symmetry, provide rf_symmetry_order ≥ 2"}, status_code=400)
+                N = int(rf_symmetry_order)
+                symid = f"{'c' if st=='cyclic' else 'd'}{N}"
+                symmetry_override = f"inference.symmetry={symid}"
+            elif st in ("tetrahedral", "octahedral", "icosahedral"):
+                symmetry_override = f"inference.symmetry={st}"
+            else:
+                return JSONResponse({"detail": f"Unsupported symmetry type: {rf_symmetry_type}"}, status_code=400)
+
+        # ---- Base docker cmd ----
+        base_cmd = (
             "docker run --rm --gpus all --shm-size=16g "
             f"-v {shlex.quote(str(RF_MODELS))}:/models "
             f"-v {shlex.quote(str(in_dir))}:/in "
             f"-v {shlex.quote(str(out_dir))}:/out "
             "rosettacommons/rfdiffusion:latest "
-            f"{hydra_contigs} "
-            f"{input_flag} "
-            "inference.model_directory_path=/models "
-            f"inference.output_prefix=/out/{out_prefix.name} "
-            f"inference.num_designs={int(rf_num_designs)}"
         )
+
+        hydra_core = " ".join(filter(None, [
+            symmetry_config,           # --config-name symmetry (or empty)
+            hydra_contigs,             # 'contigmap.contigs=[...]'
+            input_flag,                # inference.input_pdb=...
+            "inference.model_directory_path=/models",
+            f"inference.output_prefix=/out/{out_prefix.name}",
+            f"inference.num_designs={int(rf_num_designs)}",
+            symmetry_override          # inference.symmetry=cN/dN/tetrahedral/...
+        ]))
 
         # collect optional hydra overrides safely (append only if set)
         extra = []
@@ -722,6 +747,15 @@ def submit_job(
             # prefer ckpt; users can override via rf_extra_overrides if different
             extra.append(f"inference.ckpt={shlex.quote(rf_checkpoint)}")
 
+        if rf_temperature is not None:
+            extra.append(f"inference.temperature={float(rf_temperature)}")
+        if rf_guidance_scale is not None:
+            extra.append(f"potentials.guide_scale={float(rf_guidance_scale)}")
+        if rf_recycle is not None and rf_recycle != "":
+            extra.append(f"inference.recycle={int(rf_recycle)}")
+        if rf_seed is not None:
+            extra.append(f"inference.seed={int(rf_seed)}")
+
         # raw expert overrides (textarea; one per line)
         if rf_extra_overrides:
             for line in rf_extra_overrides.splitlines():
@@ -730,8 +764,7 @@ def submit_job(
                     # don't quote here; allow full hydra syntax
                     extra.append(line)
 
-        if extra:
-            cmd += " " + " ".join(extra)
+        cmd = base_cmd + hydra_core + (" " + " ".join(extra) if extra else "")
 
         with open(log_path, "a") as lf:
             lf.write(f"RFdiffusion (docker) CMD: {cmd}\n")
