@@ -489,8 +489,16 @@ def health():
 
 @app.post("/jobs")
 def submit_job(
-    tool: Literal["alphafold", "proteinmpnn", "residueid", "msa", "rfdiffusion"] = Form(...),
+    tool: Literal["alphafold", "proteinmpnn", "residueid", "msa", "rfdiffusion", "aggrescan3d"] = Form(...),
     file: Optional[UploadFile] = File(None),
+
+    # Aggrescan3D knobs
+    a3d_distance: int = Form(10),
+    a3d_dynamic: bool = Form(False),
+    a3d_foldx: bool = Form(False),
+    a3d_hide: bool = Form(True),
+    a3d_timeout_s: int = Form(1800),
+    a3d_poll_s: int = Form(10),
 
     # --- RFdiffusion knobs ---
     rf_mode: Literal["free","motif"] = Form("free"),
@@ -768,6 +776,33 @@ def submit_job(
 
         with open(log_path, "a") as lf:
             lf.write(f"RFdiffusion (docker) CMD: {cmd}\n")
+
+        _launch(cmd, log_path, job_id)
+
+    elif tool == "aggrescan3d":
+        if src_path is None or src_path.suffix.lower() != ".pdb":
+            return JSONResponse({"detail": "Aggrescan3D expects a .pdb file."}, status_code=400)
+
+        runner = Path(__file__).parent / "services" / "aggrescan3d.py"
+        if not runner.exists():
+            return JSONResponse({"detail": f"Aggrescan3D runner missing: {runner}"}, status_code=500)
+
+        py = sys.executable
+
+        cmd = (
+            f"{shlex.quote(py)} {shlex.quote(str(runner))} "
+            f"--pdb {shlex.quote(str(src_path))} "
+            f"--out_dir {shlex.quote(str(out_dir))} "
+            f"--distance {int(a3d_distance)} "
+            f"{'--dynamic ' if a3d_dynamic else ''}"
+            f"{'--foldx ' if a3d_foldx else ''}"
+            f"{'--hide ' if a3d_hide else ''}"
+            f"--timeout_s {int(a3d_timeout_s)} "
+            f"--poll_s {int(a3d_poll_s)} "
+        )
+
+        with open(log_path, "a") as lf:
+            lf.write(f"Aggrescan3D CMD: {cmd}\n")
 
         _launch(cmd, log_path, job_id)
 

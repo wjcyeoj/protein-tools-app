@@ -47,6 +47,7 @@ export default function App() {
   const [downloadPct, setDownloadPct] = useState(0); // 0–100, or null if unknown
   const [jobName, setJobName] = useState(() => localStorage.getItem(LS_JOBNAME) || '');
   useEffect(() => localStorage.setItem(LS_JOBNAME, jobName), [jobName]);
+  useEffect(() => { setFile(null); }, [tool]);
   const xhrRef = useRef(null);
   const { jobId, status, logs, canDownload, submit, clearJob } = useJob();
   const [resultData, setResultData] = useState(null);
@@ -117,6 +118,15 @@ export default function App() {
   const [seqName, setSeqName] = useState('query'); // header if user pastes plain sequence
   const [seqText, setSeqText] = useState(''); // pasted FASTA or plain sequence
 
+  const [a3dParams, setA3dParams] = useState({
+    distance: 10,
+    dynamic: false,
+    foldx: false,
+    hide: true,
+    poll_s: 10,
+    timeout_s: 1800,
+  });
+
   const [rfParams, setRfParams] = useState({
     mode: 'free',   // 'free' | 'motif'
     len: 100,
@@ -164,6 +174,18 @@ export default function App() {
         return;
       }
       fileToSend = f;
+    }
+
+    if (tool === 'aggrescan3d') {
+      if (!fileToSend) {
+        alert('Please choose a PDB file for Aggrescan3D.');
+        return;
+      }
+      const name = fileToSend.name || '';
+      if (!name.toLowerCase().endsWith('.pdb')) {
+        alert('Aggrescan3D expects a .pdb file.');
+        return;
+      }
     }
 
     // Validate inputs per tool
@@ -236,13 +258,24 @@ export default function App() {
       }
     }
 
+    if (tool === 'aggrescan3d') {
+      body.append('a3d_distance', String(a3dParams.distance));
+      body.append('a3d_dynamic', String(!!a3dParams.dynamic));
+      body.append('a3d_foldx', String(!!a3dParams.foldx));
+      body.append('a3d_hide', String(!!a3dParams.hide));
+      body.append('a3d_poll_s', String(a3dParams.poll_s));
+      body.append('a3d_timeout_s', String(a3dParams.timeout_s));
+    }
+
     if (tool === 'alphafold') {
       body.append('model_preset', afParams.model_preset);
       body.append('db_preset', afParams.db_preset);
       body.append('max_template_date', afParams.max_template_date);
       body.append('models_to_relax', afParams.models_to_relax);
       body.append('use_gpu_relax', String(!!afParams.use_gpu_relax));
-    } else {
+    }
+
+    if (tool === 'proteinmpnn') {
       body.append('mpnn_model_name', mpnnParams.model_name);
       body.append('mpnn_num_seq', String(mpnnParams.num_seq_per_target));
       body.append('mpnn_batch_size', String(mpnnParams.batch_size));
@@ -273,6 +306,7 @@ export default function App() {
             <option value="residueid">Residue Identifier</option>
             <option value="msa">Multiple Sequence Consensus</option>
             <option value="rfdiffusion">RFdiffusion</option>
+            <option value="aggrescan3d">Aggrescan3D</option>
           </select>
         </label>
       </section>
@@ -301,6 +335,93 @@ export default function App() {
         seqText={seqText}
         setSeqText={setSeqText}
       />
+
+      {tool === 'aggrescan3d' && (
+        <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}>
+          <h3 style={{ marginTop: 0 }}>Aggrescan3D parameters</h3>
+
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
+            <div>
+              <label>
+                <strong>Distance:&nbsp;</strong>
+                <select
+                  value={a3dParams.distance}
+                  onChange={(e) => setA3dParams(p => ({ ...p, distance: Number(e.target.value) }))}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                </select>
+              </label>
+              <Info>5Å = surface aggregation; 10Å = total aggregation.</Info>
+            </div>
+
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!a3dParams.dynamic}
+                  onChange={(e) => setA3dParams(p => ({ ...p, dynamic: e.target.checked }))}
+                /> Dynamic
+              </label>
+              <Info>Runs a dynamic mode (if supported by your backend runner).</Info>
+            </div>
+
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!a3dParams.foldx}
+                  onChange={(e) => setA3dParams(p => ({ ...p, foldx: e.target.checked }))}
+                /> FoldX
+              </label>
+              <Info>Enable FoldX refinement (if supported).</Info>
+            </div>
+
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!a3dParams.hide}
+                  onChange={(e) => setA3dParams(p => ({ ...p, hide: e.target.checked }))}
+                /> Hide
+              </label>
+              <Info>Hide structure in public outputs (if supported by server).</Info>
+            </div>
+
+            <div>
+              <label>
+                <strong>Poll (sec):&nbsp;</strong>
+                <input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={a3dParams.poll_s}
+                  onChange={(e) => setA3dParams(p => ({ ...p, poll_s: clamp(e.target.value, {min:1, max:120}) }))}
+                  style={{ width: 140 }}
+                />
+              </label>
+            </div>
+
+            <div>
+              <label>
+                <strong>Timeout (sec):&nbsp;</strong>
+                <input
+                  type="number"
+                  min={60}
+                  max={7200}
+                  value={a3dParams.timeout_s}
+                  onChange={(e) => setA3dParams(p => ({ ...p, timeout_s: clamp(e.target.value, {min:60, max:7200}) }))}
+                  style={{ width: 160 }}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+            Upload a <b>.pdb</b> file for Aggrescan3D.
+          </div>
+        </section>
+      )}
 
       {tool === 'alphafold' && (
         <AlphaFoldParams params={afParams} setParams={setAfParams} />
