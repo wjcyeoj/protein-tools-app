@@ -192,6 +192,11 @@ export default function App() {
       }
     }
 
+    if (tool === 'proteinsol' && !fileToSend) {
+      alert('Please choose a FASTA file or paste a sequence.');
+      return;
+    }
+
     // Validate inputs per tool
     if (tool === 'proteinmpnn' && !fileToSend) {
       alert('Please choose a PDB/CIF file for ProteinMPNN.');
@@ -311,6 +316,7 @@ export default function App() {
             <option value="msa">Multiple Sequence Consensus</option>
             <option value="rfdiffusion">RFdiffusion</option>
             <option value="aggrescan3d">Aggrescan3D</option>
+            <option value="proteinsol">ProteinSol</option>
           </select>
         </label>
       </section>
@@ -736,6 +742,28 @@ export default function App() {
 
       {/* Logs */}
       <LogsPanel logs={logs} />
+
+      {resultTool === 'proteinsol' && resultData && (
+        <section style={{ marginTop: 12 }}>
+          <strong>ProteinSol results</strong>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
+            Sequences: {resultData.summary?.n_sequences ?? '-'} ·
+            Avg scaled-sol: {resultData.summary?.avg_scaled_sol ?? '-'} ·
+            Avg percent-sol: {resultData.summary?.avg_percent_sol ?? '-'}
+          </div>
+
+          {Array.isArray(resultData.rows) && resultData.rows.length > 0 && (
+            <pre style={{ background:'#f6f6f6', padding:12, borderRadius:8, whiteSpace:'pre-wrap', marginTop: 8 }}>
+              {resultData.rows.slice(0, 10).map(r =>
+                `${r.ID || r.id || '(id?)'}  scaled-sol=${r["scaled-sol"]}  percent-sol=${r["percent-sol"]}  pI=${r["pI"]}`
+              ).join('\n')}
+              {resultData.rows.length > 10 ? `\n... (${resultData.rows.length - 10} more)` : ''}
+            </pre>
+          )}
+
+          {resultData.error && <div style={{ color: '#a00', marginTop: 8 }}>{resultData.error}</div>}
+        </section>
+      )}
 
       {/* Residue Identifier summary */}
       {resultTool === 'residueid' && resultData?.chains?.length > 0 && (

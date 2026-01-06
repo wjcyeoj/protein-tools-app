@@ -8,7 +8,8 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # (optional but recommended for AlphaFold utils)
-RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y docker.io perl && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \

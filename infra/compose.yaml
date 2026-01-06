@@ -19,7 +19,7 @@ services:
       # AlphaFold databases (read-only)
       - /data/datasets/alphafold:/data/datasets/alphafold:ro
       # Persist job outputs
-      - /data/appjobs:/data/backend/jobs
+      - /data/appjobs:/data/appjobs
       - /var/run/docker.sock:/var/run/docker.sock
       - /data/tools/proteinmpnn_official:/data/tools/proteinmpnn_official
       - /data:/data

@@ -16,10 +16,11 @@ export default function InputSection({
     tool === 'proteinmpnn' ? '.pdb,.cif' :
     tool === 'aggrescan3d' ? '.pdb' :
     tool === 'rfdiffusion' ? (rfMode === 'motif' ? '.pdb' : '') :
+    tool === 'proteinsol' ? '.fa,.fasta' :
     tool === 'residueid' ? '.fa,.fasta,.pdb' :
     tool === 'msa' ? '.fa,.fasta' :
     '.fa,.fasta';
-  const allowText = tool === 'alphafold' || tool === 'residueid' || tool === 'msa';
+  const allowText = tool === 'alphafold' || tool === 'residueid' || tool === 'msa' || tool === 'proteinsol';
   const useText = allowText && inputMode === 'text';
 
   return (
@@ -107,6 +108,8 @@ GHHHHHH...`}
               //: 'Upload FASTA (.fa/.fasta) or PDB (.pdb)'
               : tool === 'aggrescan3d'
               ? 'Upload PDB (.pdb)'
+              : tool === 'proteinsol'
+              ? 'Upload FASTA (.fa/.fasta) or paste sequence'
               : tool === 'msa'
               ? 'Upload multi-FASTA (.fa/.fasta) with ≥2 sequences'
               : 'Upload FASTA (.fa/.fasta) or PDB (.pdb)'

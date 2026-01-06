@@ -5,6 +5,7 @@ from typing import Literal, Optional, Dict, Any
 from fastapi import HTTPException, FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+from backend.services.proteinsol import run_proteinsol
 
 # =========================
 # ---- CONFIGURABLES  -----
@@ -501,7 +502,7 @@ def health():
 
 @app.post("/jobs")
 def submit_job(
-    tool: Literal["alphafold", "proteinmpnn", "residueid", "msa", "rfdiffusion", "aggrescan3d"] = Form(...),
+    tool: Literal["alphafold", "proteinmpnn", "residueid", "msa", "rfdiffusion", "aggrescan3d", "proteinsol"] = Form(...),
     file: Optional[UploadFile] = File(None),
 
     # Aggrescan3D knobs
@@ -817,6 +818,41 @@ def submit_job(
             lf.write(f"Aggrescan3D CMD: {cmd}\n")
 
         _launch(cmd, log_path, job_id)
+
+    elif tool == "proteinsol":
+        if src_path is None:
+            return JSONResponse({"detail": "ProteinSol expects a FASTA file."}, status_code=400)
+
+        ext = src_path.suffix.lower()
+        if ext not in [".fa", ".fasta"]:
+            return JSONResponse({"detail": "ProteinSol expects .fa/.fasta"}, status_code=400)
+
+        # Run synchronously or async?
+        # Easiest first: synchronous (like residueid/msa).
+        try:
+            from backend.services.proteinsol import run_proteinsol
+            result = run_proteinsol(
+                job_id=job_id,
+                input_fasta=src_path,
+                output_dir=out_dir,
+                log_path=log_path,
+            )
+        except Exception as e:
+            with open(log_path, "a") as lf:
+                lf.write(f"[proteinsol] ERROR: {e}\n")
+            return JSONResponse({"detail": f"ProteinSol failed: {e}"}, status_code=500)
+
+        JOBS[job_id]["result_data"] = result
+        JOBS[job_id]["status"] = "finished"
+
+        # optional artifact
+        try:
+            art = build_artifact(job_id, lite=True)
+            JOBS[job_id]["artifact"] = str(art)
+            JOBS[job_id]["artifact_lite"] = str(art)
+        except Exception as e:
+            with open(log_path, "a") as lf:
+                lf.write(f"[proteinsol] artifact build failed: {e}\n")
 
     elif tool == "residueid":
         if src_path is None:
