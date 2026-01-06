@@ -170,8 +170,20 @@ def _job_status(job_id: str) -> Dict[str, Any]:
             code = int(exit_file.read_text().strip() or "0")
         except Exception:
             code = -1
+
         job["status"] = "finished" if code == 0 else "failed"
         job["exit_code"] = code
+
+        # ✅ If finished, try to load tool-specific summary result_data
+        if job["status"] == "finished":
+            try:
+                out_dir = Path(job["output_dir"]).resolve()
+                summary_path = out_dir / "summary.json"
+                if summary_path.exists():
+                    job["result_data"] = json.loads(summary_path.read_text())
+            except Exception as e:
+                # don't fail job status if parsing failed
+                job["result_data"] = {"note": f"Could not parse summary.json: {e}"}
     return {"status": job["status"], "exit_code": job.get("exit_code")}
 
 def _tail(path: Path, n: int = 200) -> str:

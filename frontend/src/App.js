@@ -715,6 +715,19 @@ export default function App() {
       </form>
 
       <StatusBlock jobId={jobId} status={status} />
+      {resultTool === 'aggrescan3d' && resultData?.foldx_requested && !resultData?.foldx_used && resultData?.fallback_used && (
+        <div style={{
+          marginTop: 12,
+          padding: '10px 12px',
+          borderRadius: 8,
+          border: '1px solid #ffe08a',
+          background: '#fff8db',
+          color: '#6a4b00'
+        }}>
+          <b>Note:</b> FoldX refinement failed on the server, so this run completed <b>without FoldX</b>.
+          The aggregation scores may differ slightly from a FoldX-refined run.
+        </div>
+      )}
       <DownloadPanel jobId={jobId} canDownload={canDownload} />
 
       {/* Logs */}
