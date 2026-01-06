@@ -30,7 +30,7 @@ export default function InputSection({
           <label style={{ marginRight: 12 }}>
             <input
               type="radio"
-              name="af-input-mode"
+              name={`input-mode-${tool}`}
               value="file"
               checked={inputMode === 'file'}
               onChange={() => setInputMode('file')}
@@ -40,10 +40,13 @@ export default function InputSection({
           <label>
             <input
               type="radio"
-              name="af-input-mode"
+              name={`input-mode-${tool}`}
               value="text"
               checked={inputMode === 'text'}
-              onChange={() => setInputMode('text')}
+              onChange={() => {
+                setInputMode('text');
+                setFile(null);
+              }}
             />{' '}
             Paste FASTA / sequence
           </label>
@@ -83,9 +86,14 @@ GHHHHHH...`}
       ) : (
         <>
           <input
+            key={`${tool}-${rfMode}-${inputMode}`}
             type="file"
             accept={fileAccept}
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              setFile(f);
+              if (f) setInputMode('file');             // ✅ snap back to file mode
+            }}
           />
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
             {tool === 'alphafold'

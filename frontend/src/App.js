@@ -47,7 +47,11 @@ export default function App() {
   const [downloadPct, setDownloadPct] = useState(0); // 0–100, or null if unknown
   const [jobName, setJobName] = useState(() => localStorage.getItem(LS_JOBNAME) || '');
   useEffect(() => localStorage.setItem(LS_JOBNAME, jobName), [jobName]);
-  useEffect(() => { setFile(null); }, [tool]);
+  useEffect(() => {
+    setFile(null);
+    setSeqText('');
+    setInputMode('file');
+  }, [tool]);
   const xhrRef = useRef(null);
   const { jobId, status, logs, canDownload, submit, clearJob } = useJob();
   const [resultData, setResultData] = useState(null);
