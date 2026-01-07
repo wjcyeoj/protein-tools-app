@@ -12,24 +12,6 @@ PROTEINSOL_REPO = Path("/data/tools/protein_sol_mcp/repo/protein-sol")
 # you can keep using it. Otherwise, default to "python3".
 DEFAULT_PY = Path("/data/appjobs/venvs/proteinsol/bin/python")
 
-def _clean_bundled_examples(work_dir: Path, log_path: Path):
-    patterns = [
-        "example.fasta",
-        "example.fasta_*",
-        "example.fasta-*",
-        "*protein_sol*.csv",
-        "*protein_sol*.txt",
-        "*protein_sol*.log",
-    ]
-    removed = 0
-    for pat in patterns:
-        for p in work_dir.glob(pat):
-            try:
-                p.unlink()
-                removed += 1
-            except Exception:
-                pass
-    _append_log(log_path, f"[proteinsol] cleaned bundled example outputs (removed {removed} files)")
 
 def _append_log(log_path: Path, msg: str):
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -43,15 +25,6 @@ def _copy_pipeline_to_workdir(work_dir: Path, log_path: Path):
     We copy (not symlink) because some Perl scripts use relative file access
     and may create intermediate files alongside scripts.
     """
-    # Remove bundled example outputs so we don't accidentally pick them up
-    for pat in ["*protein_sol*.csv", "*protein_sol*.txt", "*.log"]:
-        for f in work_dir.glob(pat):
-            try:
-                f.unlink()
-            except Exception:
-                pass
-    _append_log(log_path, "[proteinsol] cleaned bundled example outputs")
-
     if not PROTEINSOL_REPO.exists():
         raise FileNotFoundError(f"ProteinSol pipeline directory not found: {PROTEINSOL_REPO}")
 
@@ -79,27 +52,31 @@ def _run(cmd: List[str], cwd: Path, log_path: Path) -> subprocess.CompletedProce
     _append_log(log_path, f"[proteinsol] return_code={p.returncode}")
     return p
 
-def _find_outputs(work_dir: Path, input_fasta: Path) -> List[Path]:
-    base = input_fasta.name  # e.g. VERI-000.fasta
 
-    # protein-sol outputs are typically: <input>.fasta-protein_sol.csv / .txt / .log
+def _find_outputs(work_dir: Path) -> List[Path]:
+    """
+    Protein-sol pipeline commonly generates:
+      *.fasta-protein_sol.csv
+      *.fasta-protein_sol_prediction.txt
+      *.fasta-protein_sol_composition.txt
+      *.log
+    We'll collect anything that looks like protein_sol outputs.
+    """
     out = []
-    out += sorted(work_dir.glob(f"{base}-protein_sol*.csv"))
-    out += sorted(work_dir.glob(f"{base}-protein_sol*.txt"))
-    out += sorted(work_dir.glob(f"{base}-protein_sol*.log"))
-
-    # Also allow underscore variant just in case
-    out += sorted(work_dir.glob(f"{base}_protein_sol*.csv"))
-    out += sorted(work_dir.glob(f"{base}_protein_sol*.txt"))
-    out += sorted(work_dir.glob(f"{base}_protein_sol*.log"))
-
-    # de-dupe
-    seen, uniq = set(), []
+    out += sorted(work_dir.glob("*.fasta-protein_sol*.csv"))
+    out += sorted(work_dir.glob("*.fasta-protein_sol*_prediction*.txt"))
+    out += sorted(work_dir.glob("*.fasta-protein_sol*_composition*.txt"))
+    out += sorted(work_dir.glob("*.fasta-protein_sol*.txt"))
+    out += sorted(work_dir.glob("*.log"))
+    # De-dupe while preserving order
+    seen = set()
+    uniq = []
     for p in out:
         if p not in seen:
             seen.add(p)
             uniq.append(p)
     return uniq
+
 
 def _standardize_outputs(produced: List[Path], out_prefix: Path, log_path: Path) -> Dict[str, str]:
     """
@@ -167,7 +144,6 @@ def run_proteinsol(
 
     try:
         _copy_pipeline_to_workdir(work_dir, log_path)
-        _clean_bundled_examples(work_dir, log_path)
 
         perl_script = work_dir / "server_prediction_seq_export.pl"
         if not perl_script.exists():
@@ -177,64 +153,16 @@ def run_proteinsol(
                 "error": f"Missing Perl script in pipeline dir: {perl_script}",
             }
 
-        # Copy FASTA into work_dir so the perl pipeline writes/reads everything locally
-        example_fasta = work_dir / "example.fasta"
-        shutil.copy2(input_fasta, example_fasta)
-
-        local_fasta = work_dir / input_fasta.name
-        if local_fasta != example_fasta:
-            shutil.copy2(input_fasta, local_fasta)
-        _append_log(log_path, f"[proteinsol] Copied input FASTA -> {local_fasta}")
-
-        wrapper = work_dir / "multiple_prediction_wrapper_export.sh"
-        wrapper_log = work_dir / "wrapper_stdout_stderr.log"
-
-        cmd = [
-            "bash",
-            "-lc",
-            (
-                "set -euo pipefail; "
-                f"chmod +x {wrapper.name}; "
-                f"./{wrapper.name} {local_fasta.name} "
-                f"> {wrapper_log.name} 2>&1; "
-                # sanity check: fail if pipeline didn't write outputs
-                "ls -la; "
-            ),
-        ]
-        p = _run(cmd, cwd=work_dir, log_path=log_path)
-
+        
         # Run Perl pipeline directly (most reliable)
         # NOTE: It often writes outputs relative to cwd, so cwd=work_dir is critical.
-#        p = _run(["perl", str(perl_script), str(local_fasta)], cwd=work_dir, log_path=log_path)
+        p = _run(["perl", str(perl_script), str(input_fasta)], cwd=work_dir, log_path=log_path)
 
-        produced = _find_outputs(work_dir, local_fasta)
-
-        if not produced:
-            # include wrapper log tail to make debugging obvious
-            tail = ""
-            if wrapper_log.exists():
-                tail = wrapper_log.read_text(errors="ignore").splitlines()[-80:]
-                tail = "\n".join(tail)
-
-            _append_log(log_path, "[proteinsol] No outputs detected after wrapper run.")
-            if tail:
-                _append_log(log_path, "[proteinsol] wrapper log tail:\n" + tail)
-
-            return {
-                "tool": "proteinsol",
-                "ok": False,
-                "return_code": p.returncode,
-                "error": "ProteinSol produced no outputs (wrapper may be swallowing internal errors). See logs.",
-                "output_prefix": str(out_prefix),
-                "files": [],
-                "rows": [],
-                "summary": {},
-            }
-
+        produced = _find_outputs(work_dir)
         mapping = _standardize_outputs(produced, out_prefix, log_path)
 
-        results_csv = mapping.get("results_csv")
-        ok = bool(results_csv) and Path(results_csv).is_file()
+        results_csv = Path(mapping.get("results_csv", ""))
+        ok = results_csv.exists()
 
         # Parse CSV rows lightly (optional). Keep empty if you want fast.
         rows: List[Dict[str, Any]] = []
