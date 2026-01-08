@@ -1,7 +1,9 @@
 from pathlib import Path
 
-AF_DB = Path("/data/af_download_data")
+AF_DB = Path("/data/datasets/alphafold")
 AF_IMAGE = "alphafold:cuda12jax"
+AF_USE_GPU = True
+JAX_PLATFORM = "cuda"
 
 BASE_INPUT  = Path("/data/appjobs/inputs")
 BASE_OUTPUT = Path("/data/appjobs/outputs")

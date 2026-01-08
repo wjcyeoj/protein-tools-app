@@ -10,6 +10,8 @@ def build_af_cmd(fasta_host: Path, out_host_dir: Path, job_id: str,
                  af["bfd_prefix"], af["mmcif_dir"], af["obsolete"]])
     if model_preset == "multimer":
         db_ok = db_ok and af["uniprot"] and af["pdb_seqres"]
+    else:
+        db_ok = db_ok and af.get("pdb70_prefix")
     if not db_ok:
         raise RuntimeError(f"AlphaFold DBs are incomplete under {AF_DB}")
 
@@ -33,6 +35,10 @@ def build_af_cmd(fasta_host: Path, out_host_dir: Path, job_id: str,
         args += [
             f"--uniprot_database_path={af['uniprot']}",
             f"--pdb_seqres_database_path={af['pdb_seqres']}",
+        ]
+    else:
+        args += [
+            f"--pdb70_database_path={af['pdb70_prefix']}",   # ✅ add this
         ]
 
     arg_str = " ".join(shlex.quote(a) for a in args)
