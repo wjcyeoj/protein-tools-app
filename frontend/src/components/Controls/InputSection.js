@@ -25,32 +25,30 @@ export default function InputSection({
 
   return (
     <section style={{ margin: '1rem 0' }}>
-      {/* Mode toggle only for AlphaFold */}
       {allowText && (
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ marginRight: 12 }}>
-            <input
-              type="radio"
-              name={`input-mode-${tool}`}
-              value="file"
-              checked={inputMode === 'file'}
-              onChange={() => setInputMode('file')}
-            />{' '}
-            Upload FASTA file
-          </label>
-          <label>
-            <input
-              type="radio"
-              name={`input-mode-${tool}`}
-              value="text"
-              checked={inputMode === 'text'}
-              onChange={() => {
+        <div className="section">
+          <label>Input</label>
+
+          <div className="segmented">
+            <button
+              type="button"
+              className={inputMode === 'file' ? 'active' : ''}
+              onClick={() => setInputMode('file')}
+            >
+              Upload file
+            </button>
+
+            <button
+              type="button"
+              className={inputMode === 'text' ? 'active' : ''}
+              onClick={() => {
                 setInputMode('text');
                 setFile(null);
               }}
-            />{' '}
-            Paste FASTA / sequence
-          </label>
+            >
+              Paste sequence
+            </button>
+          </div>
         </div>
       )}
 
