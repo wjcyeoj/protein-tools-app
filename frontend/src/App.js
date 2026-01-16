@@ -1,4 +1,9 @@
 // frontend/src/App.js
+import useGlobalSfx from './sfx/useGlobalSfx';
+import { configureSfx, playSfx } from './sfx/sfx';
+
+import doneMp3 from './assets/sfx/done.mp3';
+
 import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import Field from './components/Shared/Field';
@@ -30,6 +35,18 @@ function loadJson(key, fallback) {
 }
 
 export default function App() {
+  useGlobalSfx({ hover: true });
+  const LS_SFX = 'ptools.sfxEnabled';
+  const [sfxEnabled, setSfxEnabled] = useState(() => {
+    const v = localStorage.getItem(LS_SFX);
+    return v === null ? true : v === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem(LS_SFX, String(sfxEnabled));
+    configureSfx({ isEnabled: sfxEnabled, vol: 0.25 });
+  }, [sfxEnabled]);
+
   const [tool, setTool] = useState(() => localStorage.getItem(LS_TOOL) || 'alphafold');
   const [file, setFile] = useState(null);
 
@@ -127,6 +144,16 @@ export default function App() {
 
   const freezeRef = useRef(null);
 
+  const prevStatusRef = useRef(status);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+
+    if (prev !== 'finished' && status === 'finished') {
+      playSfx(doneMp3);
+    }
+  }, [status]);
+
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -168,6 +195,16 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        className="btnSecondary"
+        onClick={() => setSfxEnabled(v => !v)}
+        aria-pressed={sfxEnabled}
+        title="Toggle sound effects"
+      >
+        Sound: {sfxEnabled ? 'On' : 'Off'}
+      </button>
 
       <div className="card">
         <div className="cardInner">
