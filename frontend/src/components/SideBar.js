@@ -60,7 +60,10 @@ export default function Sidebar({ open, onClose }) {
                 className={`drawerItem ${active ? "active" : ""}`}
                 onClick={onClose}
               >
-                <div className="drawerItemTitle">{t.name}</div>
+                <div className="drawerItemTop">
+                  <div className="drawerIcon">{t.icon}</div>
+                  <div className="drawerItemTitle">{t.name}</div>
+                </div>
                 <div className="drawerItemDesc">{t.desc}</div>
               </Link>
             );

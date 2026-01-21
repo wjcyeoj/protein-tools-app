@@ -34,7 +34,12 @@ export default function MenuPage() {
                     height: "100%",
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: "var(--text)" }}>{t.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div className="drawerIcon">{t.icon}</div>
+                    <div style={{ fontWeight: 700, color: "var(--text)" }}>
+                      {t.name}
+                    </div>
+                  </div>
                   <div style={{ marginTop: 6, fontSize: 13, color: "var(--muted)" }}>{t.desc}</div>
                   <div style={{ marginTop: 10, fontSize: 13, color: "var(--primary)", fontWeight: 700 }}>
                     Open →

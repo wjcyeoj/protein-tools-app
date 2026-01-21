@@ -299,3 +299,25 @@ pre{
   color: var(--primary);
   font-size: 13px;
 }
+
+.drawerItemTop{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drawerIcon{
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.drawerIcon svg{
+  display: block;
+}
