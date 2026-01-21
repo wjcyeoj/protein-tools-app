@@ -1,5 +1,6 @@
-// frontend/src/App.js
-import { Link, useParams, Navigate } from "react-router-dom";
+// frontend/src/pages/ToolPage.js
+import Sidebar from "../components/SideBar";
+import { Link, useParams } from "react-router-dom";
 import { toolById } from "../tools";
 import "../App.css";
 
@@ -9,7 +10,6 @@ import { configureSfx, playSfx } from '../sfx/sfx';
 import doneMp3 from '../assets/sfx/done.mp3';
 
 import React, { useEffect, useRef, useState } from 'react';
-import '../App.css';
 import Field from '../components/Shared/Field';
 import FreezeSpecInput from '../components/Controls/FreezeSpecInput';
 import AlphaFoldParams from '../components/Controls/AlphaFoldParams';
@@ -39,7 +39,7 @@ function loadJson(key, fallback) {
 }
 
 export default function App() {
-  useGlobalSfx({ hover: true });
+  useGlobalSfx({ hover: false });
   const LS_SFX = 'ptools.sfxEnabled';
   const [sfxEnabled, setSfxEnabled] = useState(() => {
     const v = localStorage.getItem(LS_SFX);
@@ -57,6 +57,7 @@ export default function App() {
   const tool = meta?.id || "alphafold";
 
   const [file, setFile] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [jobName, setJobName] = useState(() => localStorage.getItem(LS_JOBNAME) || '');
   useEffect(() => localStorage.setItem(LS_JOBNAME, jobName), [jobName]);
@@ -193,6 +194,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
       <div className="header">
         <div className="brand">
           <div className="logo">P</div>
@@ -201,13 +203,26 @@ export default function App() {
             <p className="subtitle">{meta.desc}</p>
           </div>
         </div>
-        <Link
-          to="/"
-          className="btnSecondary"
-          style={{ padding: "10px 12px", borderRadius: 12, textDecoration: "none" }}
-        >
-          ← Main menu
-        </Link>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            type="button"
+            className="iconBtn"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open tool menu"
+            title="Tools"
+          >
+            ☰
+          </button>
+
+          <Link
+            to="/"
+            className="btnSecondary"
+            style={{ padding: "10px 12px", borderRadius: 12, textDecoration: "none" }}
+          >
+            Main menu
+          </Link>
+        </div>
       </div>
 
       <button
