@@ -2,8 +2,9 @@
 export default function Field({ label, children }) {
   return (
     <div style={{ marginBottom: 8 }}>
-      <label>
-        <strong>{label}: </strong> {children}
+      <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>{label}</span>
+        {children}
       </label>
     </div>
   );

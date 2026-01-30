@@ -1,4 +1,4 @@
-// frontend/src/components/Tools/RFdiffusionParams.js
+// frontend/src/components/Controls/RFdiffusionParams.js
 import Info from '../Shared/Info';
 import { RF_RANGES, clamp } from '../../constants/rf';
 
@@ -6,6 +6,11 @@ export default function RFdiffusionParams({ params, setParams }) {
   return (
     <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}>
       <h3 style={{ marginTop: 0 }}>RFdiffusion parameters</h3>
+
+      <div style={{ fontSize: 12, color: '#666', marginTop: -6, marginBottom: 10 }}>
+        In general: more <b>steps</b> = slower but can improve quality; higher <b>temperature</b> = more diversity;
+        higher <b>guidance</b> = stronger conditioning (but can reduce diversity).
+      </div>
 
       <div style={{ marginBottom: 8 }}>
         <label>
@@ -18,7 +23,8 @@ export default function RFdiffusionParams({ params, setParams }) {
             <option value="motif">Motif (upload PDB + contigs)</option>
           </select>
           <Info>
-            Free: generate backbone of requested length. Motif: keep PDB segment(s) fixed via contigs.
+            <b>Free</b>: generate a new backbone with the requested length (no structural constraints).{' '}
+            <b>Motif</b>: keep segment(s) from your uploaded PDB fixed and design around them using contigs.
           </Info>
         </label>
       </div>
@@ -41,7 +47,10 @@ export default function RFdiffusionParams({ params, setParams }) {
           <datalist id="rf_len_suggest">
             {RF_RANGES.len.suggest.map(v => <option key={v} value={v} />)}
           </datalist>
-          <Info>Target chain length (aa). 60–300 is a good starting range.</Info>
+          <Info>
+            Target chain length (amino acids). 80–200 is a good starting point; longer designs usually take more time
+            and may be harder to fold.
+          </Info>
         </div>
       )}
 
@@ -60,6 +69,10 @@ export default function RFdiffusionParams({ params, setParams }) {
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
             Use numbers for designed segments and chain+residue ranges from your PDB for fixed segments. “/0” inserts a chain break.
           </div>
+          <Info>
+            Contigs describe a pattern of <b>designed</b> (number ranges) and <b>fixed motif</b> segments (like A10-25).
+            Motif mode is powerful, but invalid contigs are the #1 source of failed runs.
+          </Info>
         </div>
       )}
 
@@ -80,6 +93,9 @@ export default function RFdiffusionParams({ params, setParams }) {
         <datalist id="rf_num_suggest">
           {RF_RANGES.num.suggest.map(v => <option key={v} value={v} />)}
         </datalist>
+        <Info>
+          Number of backbones to generate. Runtime scales roughly with this value. Start with 1–5 for testing, then increase.
+        </Info>
       </div>
 
       <hr style={{ margin: '12px 0', border: 0, borderTop: '1px solid #eee' }} />
@@ -102,7 +118,9 @@ export default function RFdiffusionParams({ params, setParams }) {
           <datalist id="rf_steps_suggest">
             {RF_RANGES.num_steps.suggest.map(v => <option key={v} value={v} />)}
           </datalist>
-          <Info>More steps → slower. Try 50–80.</Info>
+          <Info>
+            More steps usually increases compute time and can improve refinement. Try 50–80 first; increase if results look noisy.
+          </Info>
         </div>
 
         <div>
@@ -122,7 +140,9 @@ export default function RFdiffusionParams({ params, setParams }) {
           <datalist id="rf_temp_suggest">
             {RF_RANGES.temperature.suggest.map(v => <option key={v} value={v} />)}
           </datalist>
-          <Info>Higher = more diversity. Start ~1.0.</Info>
+          <Info>
+            Controls randomness/diversity. Higher = more diverse shapes; lower = more conservative. Start around 1.0.
+          </Info>
         </div>
 
         <div>
@@ -142,7 +162,10 @@ export default function RFdiffusionParams({ params, setParams }) {
           <datalist id="rf_guidance_suggest">
             {RF_RANGES.guidance_scale.suggest.map(v => <option key={v} value={v} />)}
           </datalist>
-          <Info>Try 1.5–3.0.</Info>
+          <Info>
+            Strength of conditioning/constraints. Higher enforces constraints more strongly but can reduce diversity or cause failures if too high.
+            Try 1.5–3.0.
+          </Info>
         </div>
 
         <div>
@@ -156,7 +179,9 @@ export default function RFdiffusionParams({ params, setParams }) {
               {RF_RANGES.recycle.suggest.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </label>
-          <Info>0–1 is a good start.</Info>
+          <Info>
+            Number of refinement recycles. More can improve quality but increases runtime. 0–1 is a good starting point.
+          </Info>
         </div>
 
         <div>
@@ -180,7 +205,9 @@ export default function RFdiffusionParams({ params, setParams }) {
                 onChange={(e)=>setParams(p=>({...p, deterministic: e.target.checked}))}
               /> Deterministic
             </label>
-            <Info>Seed + deterministic for reproducibility.</Info>
+            <Info>
+              Use a fixed seed to reproduce results. “Deterministic” reduces randomness further (best-effort; exact reproducibility can still depend on hardware).
+            </Info>
           </div>
         </div>
 
@@ -198,7 +225,9 @@ export default function RFdiffusionParams({ params, setParams }) {
               <option value="icosahedral">icosahedral</option>
             </select>
           </label>
-          <Info>Choose symmetry for oligomers.</Info>
+          <Info>
+            Enforces global symmetry, useful for oligomeric assemblies. If you set a type, also set a reasonable symmetry order (e.g., cyclic C3).
+          </Info>
         </div>
 
         <div>
@@ -218,7 +247,9 @@ export default function RFdiffusionParams({ params, setParams }) {
           <datalist id="rf_symorder_suggest">
             {RF_RANGES.symmetry_order.suggest.map(v => <option key={v} value={v} />)}
           </datalist>
-          <Info>cyclic: 2=C2, 3=C3, etc.</Info>
+          <Info>
+            Cyclic: 2=C2, 3=C3, etc. Dihedral: 2=D2, 3=D3, etc. Leave blank if symmetry type is none.
+          </Info>
         </div>
 
         <div>
@@ -238,7 +269,9 @@ export default function RFdiffusionParams({ params, setParams }) {
           <datalist id="rf_plddt_suggest">
             {RF_RANGES.min_plddt.suggest.map(v => <option key={v} value={v} />)}
           </datalist>
-          <Info>Filter out low-confidence designs.</Info>
+          <Info>
+            Filters out low-confidence designs (if your backend uses this as a post-filter). Higher values are stricter and may yield fewer results.
+          </Info>
         </div>
 
         <div style={{ gridColumn: '1 / -1' }}>
@@ -251,7 +284,9 @@ export default function RFdiffusionParams({ params, setParams }) {
               placeholder="/models/some_checkpoint.pt"
             />
           </label>
-          <Info>Override default weights only if you mean it.</Info>
+          <Info>
+            Override default weights only if you know what you’re doing. Wrong checkpoints often fail at load time.
+          </Info>
         </div>
 
         <div style={{ gridColumn: '1 / -1' }}>
@@ -264,7 +299,7 @@ export default function RFdiffusionParams({ params, setParams }) {
             style={{ width: '100%', fontFamily:'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           />
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            Appends raw Hydra overrides. Use with care.
+            Appends raw Hydra overrides to the command. Use with care—invalid overrides can break runs.
           </div>
         </div>
       </div>

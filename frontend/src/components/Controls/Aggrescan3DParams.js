@@ -7,6 +7,11 @@ export default function Aggrescan3DParams({ params, setParams }) {
     <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}>
       <h3 style={{ marginTop: 0 }}>Aggrescan3D parameters</h3>
 
+      <div style={{ fontSize: 12, color: '#666', marginTop: -6, marginBottom: 10 }}>
+        Aggrescan3D estimates aggregation-prone regions based on 3D structure.
+        Results depend on structure quality and optional refinement.
+      </div>
+
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
         <div>
           <label>
@@ -15,11 +20,16 @@ export default function Aggrescan3DParams({ params, setParams }) {
               value={params.distance}
               onChange={(e) => setParams(p => ({ ...p, distance: Number(e.target.value) }))}
             >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
+              <option value={5}>5 Å</option>
+              <option value={10}>10 Å</option>
             </select>
           </label>
-          <Info>5Å = surface aggregation; 10Å = total aggregation.</Info>
+          <Info>
+            Defines the radius used to evaluate aggregation propensity.
+            <br /><br />
+            <b>5 Å</b>: focuses on surface-exposed residues (surface aggregation risk).<br />
+            <b>10 Å</b>: includes buried residues (overall aggregation tendency).
+          </Info>
         </div>
 
         <div>
@@ -30,7 +40,10 @@ export default function Aggrescan3DParams({ params, setParams }) {
               onChange={(e) => setParams(p => ({ ...p, dynamic: e.target.checked }))}
             /> Dynamic
           </label>
-          <Info>Runs dynamic mode (if supported by backend runner).</Info>
+          <Info>
+            Enables dynamic mode, which samples conformational flexibility if supported by the backend.
+            Can better capture transiently exposed aggregation-prone regions, but may increase runtime.
+          </Info>
         </div>
 
         <div>
@@ -41,7 +54,10 @@ export default function Aggrescan3DParams({ params, setParams }) {
               onChange={(e) => setParams(p => ({ ...p, foldx: e.target.checked }))}
             /> FoldX
           </label>
-          <Info>Enable FoldX refinement (if supported).</Info>
+          <Info>
+            Runs FoldX structural refinement before aggregation analysis.
+            This can improve side-chain packing and geometry, but increases runtime and may fail for some structures.
+          </Info>
         </div>
 
         <div>
@@ -52,7 +68,10 @@ export default function Aggrescan3DParams({ params, setParams }) {
               onChange={(e) => setParams(p => ({ ...p, hide: e.target.checked }))}
             /> Hide
           </label>
-          <Info>Hide structure in public outputs (if supported).</Info>
+          <Info>
+            Hides the uploaded structure from public-facing outputs or shared results (if supported by the backend).
+            Does not affect the analysis itself.
+          </Info>
         </div>
 
         <div>
@@ -63,10 +82,14 @@ export default function Aggrescan3DParams({ params, setParams }) {
               min={1}
               max={120}
               value={params.poll_s}
-              onChange={(e) => setParams(p => ({ ...p, poll_s: clamp(e.target.value, {min:1, max:120}) }))}
+              onChange={(e) => setParams(p => ({ ...p, poll_s: clamp(e.target.value, { min:1, max:120 }) }))}
               style={{ width: 140 }}
             />
           </label>
+          <Info>
+            How often the frontend checks job status. Smaller values update faster but create more server requests.
+            Usually fine to leave at default.
+          </Info>
         </div>
 
         <div>
@@ -77,15 +100,19 @@ export default function Aggrescan3DParams({ params, setParams }) {
               min={60}
               max={7200}
               value={params.timeout_s}
-              onChange={(e) => setParams(p => ({ ...p, timeout_s: clamp(e.target.value, {min:60, max:7200}) }))}
+              onChange={(e) => setParams(p => ({ ...p, timeout_s: clamp(e.target.value, { min:60, max:7200 }) }))}
               style={{ width: 160 }}
             />
           </label>
+          <Info>
+            Maximum time allowed for the run before it is aborted.
+            Increase for large structures or when using FoldX.
+          </Info>
         </div>
       </div>
 
       <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
-        Upload a <b>.pdb</b> file for Aggrescan3D.
+        Upload a <b>.pdb</b> file for Aggrescan3D analysis.
       </div>
     </section>
   );

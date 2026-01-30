@@ -321,3 +321,49 @@ pre{
 .drawerIcon svg{
   display: block;
 }
+
+.tooltipWrap{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+}
+
+.tooltipIcon{
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  cursor: help;
+  background: white;
+  line-height: 1;
+}
+
+.tooltipBubble{
+  position: absolute;
+  bottom: 135%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  max-width: 70vw;
+  background: #0f172a;
+  color: white;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+  z-index: 80;
+  white-space: normal;
+}
+
+.tooltipWrap:hover .tooltipBubble{
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
