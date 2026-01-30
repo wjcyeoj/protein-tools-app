@@ -2,10 +2,21 @@
 import Info from '../Shared/Info';
 import { clamp } from '../../constants/rf';
 
-export default function Aggrescan3DParams({ params, setParams }) {
+export default function Aggrescan3DParams({ params, setParams, defaults }) {
   return (
     <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}>
-      <h3 style={{ marginTop: 0 }}>Aggrescan3D parameters</h3>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ marginTop: 0, marginBottom: 0 }}>Aggrescan3D parameters</h3>
+        <button
+          type="button"
+          className="btnSecondary"
+          style={{ padding: "6px 10px", fontSize: 12 }}
+          onClick={() => setParams({ ...defaults })}
+        >
+          Reset to defaults
+        </button>
+      </div>
 
       <div style={{ fontSize: 12, color: '#666', marginTop: -6, marginBottom: 10 }}>
         Aggrescan3D estimates aggregation-prone regions based on 3D structure.

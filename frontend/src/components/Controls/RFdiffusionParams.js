@@ -2,10 +2,21 @@
 import Info from '../Shared/Info';
 import { RF_RANGES, clamp } from '../../constants/rf';
 
-export default function RFdiffusionParams({ params, setParams }) {
+export default function RFdiffusionParams({ params, setParams, defaults }) {
   return (
     <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, margin: '1rem 0' }}>
-      <h3 style={{ marginTop: 0 }}>RFdiffusion parameters</h3>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ marginTop: 0, marginBottom: 0 }}>RFdiffusion parameters</h3>
+        <button
+          type="button"
+          className="btnSecondary"
+          style={{ padding: "6px 10px", fontSize: 12 }}
+          onClick={() => setParams({ ...defaults })}
+        >
+          Reset to defaults
+        </button>
+      </div>
 
       <div style={{ fontSize: 12, color: '#666', marginTop: -6, marginBottom: 10 }}>
         In general: more <b>steps</b> = slower but can improve quality; higher <b>temperature</b> = more diversity;

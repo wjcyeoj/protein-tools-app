@@ -30,6 +30,51 @@ const LS_AF = 'ptools.afParams';
 const LS_MPNN = 'ptools.mpnnParams';
 const LS_JOBNAME = 'ptools.jobName';
 
+const AF_DEFAULTS = {
+  model_preset: 'monomer',
+  db_preset: 'full_dbs',
+  max_template_date: '2024-12-31',
+  models_to_relax: 'none',
+  use_gpu_relax: false,
+};
+
+const MPNN_DEFAULTS = {
+  model_name: 'v_48_020',
+  num_seq_per_target: 10,
+  batch_size: 1,
+  sampling_temp: 0.2,
+};
+
+const A3D_DEFAULTS = {
+  distance: 10,
+  dynamic: false,
+  foldx: false,
+  hide: true,
+  poll_s: 10,
+  timeout_s: 1800,
+};
+
+const RF_DEFAULTS = {
+  mode: 'free',
+  len: 100,
+  num: 1,
+  contigs: '',
+
+  num_steps: '',
+  temperature: '',
+  guidance_scale: '',
+  recycle: '',
+  seed: '',
+  deterministic: false,
+
+  symmetry_type: '',
+  symmetry_order: '',
+  min_plddt: '',
+
+  checkpoint: '',
+  extra_overrides: '',
+};
+
 function loadJson(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key)) || fallback;
@@ -86,22 +131,11 @@ export default function App() {
   }, [jobId, status]);
 
   const [afParams, setAfParams] = useState(() =>
-    loadJson(LS_AF, {
-      model_preset: 'monomer',
-      db_preset: 'full_dbs',
-      max_template_date: '2024-12-31',
-      models_to_relax: 'none',
-      use_gpu_relax: false,
-    })
+    loadJson(LS_AF, AF_DEFAULTS)
   );
 
   const [mpnnParams, setMpnnParams] = useState(() =>
-    loadJson(LS_MPNN, {
-      model_name: 'v_48_020',
-      num_seq_per_target: 10,
-      batch_size: 1,
-      sampling_temp: 0.2,
-    })
+    loadJson(LS_MPNN, MPNN_DEFAULTS)
   );
 
   // text input mode for allowed tools
@@ -109,39 +143,19 @@ export default function App() {
   const [seqName, setSeqName] = useState('query');
   const [seqText, setSeqText] = useState('');
 
-  const [a3dParams, setA3dParams] = useState({
-    distance: 10,
-    dynamic: false,
-    foldx: false,
-    hide: true,
-    poll_s: 10,
-    timeout_s: 1800,
-  });
+  const [a3dParams, setA3dParams] = useState(() =>
+    loadJson('ptools.a3dParams', A3D_DEFAULTS)
+  );
 
-  const [rfParams, setRfParams] = useState({
-    mode: 'free',
-    len: 100,
-    num: 1,
-    contigs: '',
-
-    num_steps: '',
-    temperature: '',
-    guidance_scale: '',
-    recycle: '',
-    seed: '',
-    deterministic: false,
-
-    symmetry_type: '',
-    symmetry_order: '',
-    min_plddt: '',
-
-    checkpoint: '',
-    extra_overrides: '',
-  });
+  const [rfParams, setRfParams] = useState(() =>
+    loadJson('ptools.rfParams', RF_DEFAULTS)
+  );
 
   // persist selections
   useEffect(() => localStorage.setItem(LS_AF, JSON.stringify(afParams)), [afParams]);
   useEffect(() => localStorage.setItem(LS_MPNN, JSON.stringify(mpnnParams)), [mpnnParams]);
+  useEffect(() => localStorage.setItem('ptools.a3dParams', JSON.stringify(a3dParams)), [a3dParams]);
+  useEffect(() => localStorage.setItem('ptools.rfParams', JSON.stringify(rfParams)), [rfParams]);
 
   // reset file/text when tool changes (keeps old behavior)
   useEffect(() => {
@@ -268,26 +282,26 @@ export default function App() {
 
           {tool === 'aggrescan3d' && (
             <div className="section">
-              <Aggrescan3DParams params={a3dParams} setParams={setA3dParams} />
+              <Aggrescan3DParams params={a3dParams} setParams={setA3dParams} defaults={A3D_DEFAULTS} />
             </div>
           )}
 
           {tool === 'alphafold' && (
             <div className="section">
-              <AlphaFoldParams params={afParams} setParams={setAfParams} />
+              <AlphaFoldParams params={afParams} setParams={setAfParams} defaults={AF_DEFAULTS} />
             </div>
           )}
 
           {tool === 'proteinmpnn' && (
             <div className="section">
-              <ProteinMpnnParams params={mpnnParams} setParams={setMpnnParams} />
+              <ProteinMpnnParams params={mpnnParams} setParams={setMpnnParams} defaults={MPNN_DEFAULTS} />
               <FreezeSpecInput inputRef={freezeRef} />
             </div>
           )}
 
           {tool === 'rfdiffusion' && (
             <div className="section">
-              <RFdiffusionParams params={rfParams} setParams={setRfParams} />
+              <RFdiffusionParams params={rfParams} setParams={setRfParams} defaults={RF_DEFAULTS} />
             </div>
           )}
 

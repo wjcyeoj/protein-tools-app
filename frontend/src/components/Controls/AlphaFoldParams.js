@@ -2,10 +2,21 @@
 import Field from "../Shared/Field";
 import Info from "../Shared/Info";
 
-export default function AlphaFoldParams({ params, setParams }) {
+export default function AlphaFoldParams({ params, setParams, defaults }) {
   return (
     <section style={{ border: "1px solid #eee", borderRadius: 8, padding: 12, margin: "1rem 0" }}>
-      <h3 style={{ marginTop: 0 }}>AlphaFold parameters</h3>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ marginTop: 0, marginBottom: 0 }}>AlphaFold parameters</h3>
+        <button
+          type="button"
+          className="btnSecondary"
+          style={{ padding: "6px 10px", fontSize: 12 }}
+          onClick={() => setParams(defaults)}
+        >
+          Reset to defaults
+        </button>
+      </div>
 
       <div style={{ fontSize: 12, color: "#666", marginTop: -6, marginBottom: 10 }}>
         Rough rule: multimer + full_dbs + relax is most thorough but slowest.
