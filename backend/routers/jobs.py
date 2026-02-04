@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from ..utils import config
 from ..utils.io import safe_name, write_upload, tail as tail_file
 from ..utils.jobs_state import JOBS, now_ts, status as job_status_state, mark_finished, mark_failed
-from ..utils.fasta import parse_fasta_positions, muscle_align_if_available, conserved_columns, read_fasta_file
+from ..utils.fasta import pid_matrix, parse_fasta_positions, muscle_align_if_available, conserved_columns, read_fasta_file
 from ..utils.pdb import parse_pdb_positions
 
 from ..services.processes import launch_and_log
@@ -284,10 +284,17 @@ def submit_job(
             same_len = len(set(len(s) for _, s in recs)) == 1
             if same_len:
                 result = conserved_columns(recs, ignore_gaps=True)
+                result["pid"] = pid_matrix(recs, ignore_gaps=True)
             else:
-                result = {"note": "Sequences not aligned; install MUSCLE to auto-align", "n_sequences": len(recs), "aligned_length": 0, "conserved": []}
+                result = {
+                    "note": "Sequences not aligned; install MUSCLE to auto-align",
+                    "n_sequences": len(recs),
+                    "aligned_length": 0,
+                    "conserved": [],
+                    "pid": None,
+                }
 
-        out_json = out_dir / "msa_conserved.json"
+        out_json = out_dir / "msa_results.json"
         out_json.write_text(json.dumps(result, indent=2))
 
         mark_finished(job_id, result_data=result)

@@ -61,7 +61,7 @@ export const TOOLS = [
   { id: "aggrescan3d",  name: "Aggrescan3D", desc: "Estimate aggregation hotspots from 3D structure (PDB).", icon: TOOL_ICONS.aggrescan3d },
   { id: "proteinsol",   name: "ProteinSol", desc: "Compute sequence-based solubility metrics from FASTA.", icon: TOOL_ICONS.proteinsol },
   { id: "residueid",    name: "Residue Identifier", desc: "Summarize residues (e.g., cysteines/lysines) from FASTA/PDB.", icon: TOOL_ICONS.residueid },
-  { id: "msa",          name: "MSA Consensus", desc: "Find fully conserved positions from a multi-FASTA alignment.", icon: TOOL_ICONS.msa },
+  { id: "msa",          name: "MSA Consensus", desc: "Find fully conserved positions and percent identity from a multi-FASTA alignment.", icon: TOOL_ICONS.msa },
 ];
 
 export function toolById(id) {

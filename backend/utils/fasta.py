@@ -116,3 +116,104 @@ def conserved_columns(records: list[tuple[str, str]], ignore_gaps: bool = True) 
             conserved.append({"position": i + 1, "residue": aa})
 
     return {"n_sequences": len(seqs), "aligned_length": L, "conserved": conserved}
+
+def pairwise_pid(
+    seq_a: str,
+    seq_b: str,
+    *,
+    ignore_gaps: bool = True,
+) -> float:
+    """
+    Percent identity between two *aligned* sequences.
+
+    If ignore_gaps=True (default):
+      - Only positions where BOTH sequences are not '-' are compared.
+      - PID = matches / compared * 100
+    """
+    a = (seq_a or "").upper()
+    b = (seq_b or "").upper()
+
+    if len(a) != len(b) or len(a) == 0:
+        return 0.0
+
+    matches = 0
+    compared = 0
+
+    for ca, cb in zip(a, b):
+        if ignore_gaps and (ca == "-" or cb == "-"):
+            continue
+
+        # If you want to also ignore columns where either is non-alphanumeric, add filtering here.
+        compared += 1
+        if ca == cb:
+            matches += 1
+
+    return (100.0 * matches / compared) if compared else 0.0
+
+
+def pid_matrix(records: list[tuple[str, str]], *, ignore_gaps: bool = True) -> dict:
+    """
+    Build an NxN PID matrix for MSA records [(header, aligned_seq), ...].
+
+    Returns:
+      {
+        "n_sequences": N,
+        "aligned_length": L,
+        "ignore_gaps": bool,
+        "headers": [..],
+        "matrix": [[..float..], ...],
+        "summary": {"min": .., "max": .., "mean": ..}  # off-diagonal only
+      }
+    """
+    if not records:
+        return {
+            "n_sequences": 0,
+            "aligned_length": 0,
+            "ignore_gaps": ignore_gaps,
+            "headers": [],
+            "matrix": [],
+            "summary": {"min": 0.0, "max": 0.0, "mean": 0.0},
+        }
+
+    headers = [h for h, _ in records]
+    seqs = [s.upper() for _, s in records]
+    L = len(seqs[0])
+
+    if any(len(s) != L for s in seqs):
+        # Not an MSA / inconsistent alignment length
+        return {
+            "n_sequences": len(seqs),
+            "aligned_length": 0,
+            "ignore_gaps": ignore_gaps,
+            "headers": headers,
+            "matrix": [],
+            "summary": {"min": 0.0, "max": 0.0, "mean": 0.0},
+        }
+
+    n = len(seqs)
+    mat: list[list[float]] = [[0.0] * n for _ in range(n)]
+
+    off_diag = []
+    for i in range(n):
+        mat[i][i] = 100.0
+        for j in range(i + 1, n):
+            pid = pairwise_pid(seqs[i], seqs[j], ignore_gaps=ignore_gaps)
+            mat[i][j] = pid
+            mat[j][i] = pid
+            off_diag.append(pid)
+
+    if off_diag:
+        mn = min(off_diag)
+        mx = max(off_diag)
+        mean = sum(off_diag) / len(off_diag)
+    else:
+        mn = mx = mean = 0.0
+
+    return {
+        "n_sequences": n,
+        "aligned_length": L,
+        "ignore_gaps": ignore_gaps,
+        "headers": headers,
+        "matrix": mat,
+        "summary": {"min": mn, "max": mx, "mean": mean},
+    }
